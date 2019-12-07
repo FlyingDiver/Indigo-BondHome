@@ -1,0 +1,70 @@
+<?xml version="1.0"?>
+<Devices>
+    <SupportURL>https://forums.indigodomo.com/viewforum.php?f=295</SupportURL>
+
+    <Device id="bondBridge" type="custom">
+        <Name>Bond Bridge Device</Name>
+        <ConfigUI>
+            <Field id="address" type="textfield"  defaultValue="" tooltip="Enter IP address or Hostname of gateway.">
+				<Label>IP Address or Hostname:</Label>
+			</Field>
+			<Field id="token" type="textfield" defaultValue="" tooltip="Local Token">
+				<Label>Local Token:</Label>
+			</Field>
+        </ConfigUI>
+     </Device>
+
+    <Device id="bondShade" type="relay">
+        <Name>Shade </Name>
+        <ConfigUI>
+            <Field id="SupportsStatusRequest" type="checkbox" defaultValue="false" hidden="true" />
+            <Field id="bridge" type="menu">
+                <Label>Bridge:</Label>
+                <List class="self" method="get_bridge_list" dynamicReload="true"/>
+                <CallbackMethod>menuChanged</CallbackMethod>
+            </Field>
+            <Field id="address" type="textField" defaultValue="">
+                <Label>Device ID:</Label>
+            </Field>
+        </ConfigUI>
+    </Device>
+    
+    <Device id="bondFan" type="speedcontrol">
+        <Name>Fan</Name>
+        <ConfigUI>
+            <Field id="SupportsStatusRequest" type="checkbox" defaultValue="false" hidden="true" />
+            <Field id="bridge" type="menu">
+                <Label>Bridge:</Label>
+                <List class="self" method="get_bridge_list" dynamicReload="true"/>
+                <CallbackMethod>menuChanged</CallbackMethod>
+            </Field>
+            <Field id="address" type="textField" defaultValue="">
+                <Label>Device ID:</Label>
+            </Field>
+            <Field id="LastSpeed" type="textfield" hidden="true" defaultValue="100"/>
+        </ConfigUI>
+        <States>
+            <State id="ActualSpeed">
+                <ValueType>Integer</ValueType>
+                <TriggerLabel>Fan Speed %</TriggerLabel>
+                <ControlPageLabel>Fan Speed %</ControlPageLabel>
+            </State>
+        </States>
+    </Device>
+    
+    <Device id="bondFireplace" type="relay">
+        <Name>FirePlace</Name>
+        <ConfigUI>
+            <Field id="SupportsStatusRequest" type="checkbox" defaultValue="false" hidden="true" />
+            <Field id="bridge" type="menu">
+                <Label>Bridge:</Label>
+                <List class="self" method="get_bridge_list" dynamicReload="true"/>
+                <CallbackMethod>menuChanged</CallbackMethod>
+            </Field>
+            <Field id="address" type="textField" defaultValue="">
+                <Label>Device ID:</Label>
+            </Field>
+        </ConfigUI>
+    </Device>
+
+</Devices>

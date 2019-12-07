@@ -127,3 +127,7 @@ dmypy.json
 
 # Pyre type checker
 .pyre/
+/bondhome.io.webloc
+/ReDoc documentation.webloc
+/responses.py
+/swagger.json
