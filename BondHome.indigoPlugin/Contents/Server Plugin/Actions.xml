@@ -1,13 +1,13 @@
 <?xml version="1.0"?>
 <Actions>
     <SupportURL>https://forums.indigodomo.com/viewforum.php?f=295</SupportURL>
-	<Action id="sendDeviceCommand" deviceFilter="self">
+	<Action id="sendDeviceCommand" deviceFilter="self.bondDevice">
 		<Name>Send Device Command</Name>
 		<CallbackMethod>sendDeviceCommand</CallbackMethod>
         <ConfigUI>
             <Field id="command" type="menu">
                 <Label>Command:</Label>
-                <List class="self" method="get_action_list_by_device" dynamicReload="true"/>
+                <List class="self" method="get_action_list" dynamicReload="true"/>
                 <CallbackMethod>menuChanged</CallbackMethod>
             </Field>
             <Field id="argument" type="textfield">

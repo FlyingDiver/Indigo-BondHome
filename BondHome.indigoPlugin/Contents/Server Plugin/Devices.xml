@@ -3,7 +3,7 @@
     <SupportURL>https://forums.indigodomo.com/viewforum.php?f=295</SupportURL>
 
     <Device id="bondBridge" type="custom">
-        <Name>Bond Bridge</Name>
+        <Name>Bond Home Bridge</Name>
         <ConfigUI>
             <Field id="address" type="textfield"  defaultValue="" tooltip="Enter IP address or Hostname of gateway.">
 				<Label>IP Address or Hostname:</Label>
@@ -14,10 +14,9 @@
         </ConfigUI>
      </Device>
 
-    <Device id="bondShade" type="relay">
-        <Name>Motorized Shade</Name>
+    <Device id="bondDevice" type="custom">
+        <Name>Bond Home Device</Name>
         <ConfigUI>
-            <Field id="SupportsStatusRequest" type="checkbox" defaultValue="false" hidden="true" />
             <Field id="bridge" type="menu">
                 <Label>Bridge:</Label>
                 <List class="self" method="get_bridge_list" dynamicReload="true"/>
@@ -25,116 +24,26 @@
             </Field>
             <Field id="address" type="menu">
                 <Label>Device:</Label>
-                <List class="self" method="get_device_list" filter="MS" dynamicReload="true"/>
-                <CallbackMethod>menuChanged</CallbackMethod>
-            </Field>
-            <Field id="on_cmd" type="menu">
-                <Label>On Command:</Label>
-                <List class="self" method="get_action_list" dynamicReload="true"/>
-                <CallbackMethod>menuChanged</CallbackMethod>
-            </Field>
-            <Field id="off_cmd" type="menu">
-                <Label>Off Command:</Label>
-                <List class="self" method="get_action_list" dynamicReload="true"/>
+                <List class="self" method="get_device_list" dynamicReload="true"/>
                 <CallbackMethod>menuChanged</CallbackMethod>
             </Field>
         </ConfigUI>
+        <States>
+        <States>
+            <State id="status" readonly="true">
+                <ValueType >String</ValueType>
+                <TriggerLabel>Status</TriggerLabel>
+                <ControlPageLabel>Status</ControlPageLabel>
+            </State>
+        </States>
+        <UiDisplayStateId>status</UiDisplayStateId>
+            <State id="last_command" readonly="true">
+                <ValueType >String</ValueType>
+                <TriggerLabel>Last Command</TriggerLabel>
+                <ControlPageLabel>Last Command</ControlPageLabel>
+            </State>
+        </States>
+        <UiDisplayStateId>status</UiDisplayStateId>
     </Device>
-    
-    <Device id="bondFireplace" type="relay">
-        <Name>Fire Place</Name>
-        <ConfigUI>
-            <Field id="SupportsStatusRequest" type="checkbox" defaultValue="false" hidden="true" />
-            <Field id="bridge" type="menu">
-                <Label>Bridge:</Label>
-                <List class="self" method="get_bridge_list" dynamicReload="true"/>
-                <CallbackMethod>menuChanged</CallbackMethod>
-            </Field>
-            <Field id="address" type="menu">
-                <Label>Device:</Label>
-                <List class="self" method="get_device_list" filter="FP" dynamicReload="true"/>
-                <CallbackMethod>menuChanged</CallbackMethod>
-            </Field>
-            <Field id="on_cmd" type="menu">
-                <Label>On Command:</Label>
-                <List class="self" method="get_action_list" dynamicReload="true"/>
-                <CallbackMethod>menuChanged</CallbackMethod>
-            </Field>
-            <Field id="off_cmd" type="menu">
-                <Label>Off Command:</Label>
-                <List class="self" method="get_action_list" dynamicReload="true"/>
-                <CallbackMethod>menuChanged</CallbackMethod>
-            </Field>
-        </ConfigUI>
-    </Device>
-
-    <Device id="bondFan" type="speedcontrol">
-        <Name>Ceiling Fan</Name>
-        <ConfigUI>
-            <Field id="SupportsStatusRequest" type="checkbox" defaultValue="false" hidden="true" />
-            <Field id="LastSpeed" type="textfield" hidden="true" defaultValue="100"/>
-            <Field id="bridge" type="menu">
-                <Label>Bridge:</Label>
-                <List class="self" method="get_bridge_list" dynamicReload="true"/>
-                <CallbackMethod>menuChanged</CallbackMethod>
-            </Field>
-            <Field id="address" type="menu">
-                <Label>Device:</Label>
-                <List class="self" method="get_device_list" filter="CF" dynamicReload="true"/>
-                <CallbackMethod>menuChanged</CallbackMethod>
-            </Field>
-            <Field id="on_cmd" type="menu">
-                <Label>On Command:</Label>
-                <List class="self" method="get_action_list" dynamicReload="true"/>
-                <CallbackMethod>menuChanged</CallbackMethod>
-            </Field>
-            <Field id="off_cmd" type="menu">
-                <Label>Off Command:</Label>
-                <List class="self" method="get_action_list" dynamicReload="true"/>
-                <CallbackMethod>menuChanged</CallbackMethod>
-            </Field>
-            <Field id="speed_cmd" type="menu">
-                <Label>Set Speed Command:</Label>
-                <List class="self" method="get_action_list" dynamicReload="true"/>
-                <CallbackMethod>menuChanged</CallbackMethod>
-            </Field>
-            <Field id="low_speed" type="textfield">
-                <Label>Low Speed Value:</Label>
-            </Field>
-            <Field id="med_speed" type="textfield">
-                <Label>Medium Speed Value:</Label>
-            </Field>
-            <Field id="high_speed" type="textfield">
-                <Label>High Speed Value:</Label>
-            </Field>
-        </ConfigUI>
-    </Device>
-    
-    <Device id="bondDevice" type="relay">
-        <Name>Generic Device</Name>
-        <ConfigUI>
-            <Field id="SupportsStatusRequest" type="checkbox" defaultValue="false" hidden="true" />
-            <Field id="bridge" type="menu">
-                <Label>Bridge:</Label>
-                <List class="self" method="get_bridge_list" dynamicReload="true"/>
-                <CallbackMethod>menuChanged</CallbackMethod>
-            </Field>
-            <Field id="address" type="menu">
-                <Label>Device:</Label>
-                <List class="self" method="get_device_list" filter="GX" dynamicReload="true"/>
-                <CallbackMethod>menuChanged</CallbackMethod>
-            </Field>
-            <Field id="on_cmd" type="menu">
-                <Label>On Command:</Label>
-                <List class="self" method="get_action_list" dynamicReload="true"/>
-                <CallbackMethod>menuChanged</CallbackMethod>
-            </Field>
-            <Field id="off_cmd" type="menu">
-                <Label>Off Command:</Label>
-                <List class="self" method="get_action_list" dynamicReload="true"/>
-                <CallbackMethod>menuChanged</CallbackMethod>
-            </Field>
-        </ConfigUI>
-    </Device>
-    
+     
 </Devices>
