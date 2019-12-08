@@ -30,12 +30,12 @@
             </Field>
             <Field id="on_cmd" type="menu">
                 <Label>On Command:</Label>
-                <List class="self" method="get_command_list" dynamicReload="true"/>
+                <List class="self" method="get_action_list" dynamicReload="true"/>
                 <CallbackMethod>menuChanged</CallbackMethod>
             </Field>
             <Field id="off_cmd" type="menu">
                 <Label>Off Command:</Label>
-                <List class="self" method="get_command_list" dynamicReload="true"/>
+                <List class="self" method="get_action_list" dynamicReload="true"/>
                 <CallbackMethod>menuChanged</CallbackMethod>
             </Field>
         </ConfigUI>
@@ -57,12 +57,12 @@
             </Field>
             <Field id="on_cmd" type="menu">
                 <Label>On Command:</Label>
-                <List class="self" method="get_command_list" dynamicReload="true"/>
+                <List class="self" method="get_action_list" dynamicReload="true"/>
                 <CallbackMethod>menuChanged</CallbackMethod>
             </Field>
             <Field id="off_cmd" type="menu">
                 <Label>Off Command:</Label>
-                <List class="self" method="get_command_list" dynamicReload="true"/>
+                <List class="self" method="get_action_list" dynamicReload="true"/>
                 <CallbackMethod>menuChanged</CallbackMethod>
             </Field>
         </ConfigUI>
@@ -85,22 +85,29 @@
             </Field>
             <Field id="on_cmd" type="menu">
                 <Label>On Command:</Label>
-                <List class="self" method="get_command_list" dynamicReload="true"/>
+                <List class="self" method="get_action_list" dynamicReload="true"/>
                 <CallbackMethod>menuChanged</CallbackMethod>
             </Field>
             <Field id="off_cmd" type="menu">
                 <Label>Off Command:</Label>
-                <List class="self" method="get_command_list" dynamicReload="true"/>
+                <List class="self" method="get_action_list" dynamicReload="true"/>
                 <CallbackMethod>menuChanged</CallbackMethod>
             </Field>
+            <Field id="speed_cmd" type="menu">
+                <Label>Set Speed Command:</Label>
+                <List class="self" method="get_action_list" dynamicReload="true"/>
+                <CallbackMethod>menuChanged</CallbackMethod>
+            </Field>
+            <Field id="low_speed" type="textfield">
+                <Label>Low Speed Value:</Label>
+            </Field>
+            <Field id="med_speed" type="textfield">
+                <Label>Medium Speed Value:</Label>
+            </Field>
+            <Field id="high_speed" type="textfield">
+                <Label>High Speed Value:</Label>
+            </Field>
         </ConfigUI>
-        <States>
-            <State id="ActualSpeed">
-                <ValueType>Integer</ValueType>
-                <TriggerLabel>Fan Speed %</TriggerLabel>
-                <ControlPageLabel>Fan Speed %</ControlPageLabel>
-            </State>
-        </States>
     </Device>
     
     <Device id="bondDevice" type="relay">
@@ -119,12 +126,12 @@
             </Field>
             <Field id="on_cmd" type="menu">
                 <Label>On Command:</Label>
-                <List class="self" method="get_command_list" dynamicReload="true"/>
+                <List class="self" method="get_action_list" dynamicReload="true"/>
                 <CallbackMethod>menuChanged</CallbackMethod>
             </Field>
             <Field id="off_cmd" type="menu">
                 <Label>Off Command:</Label>
-                <List class="self" method="get_command_list" dynamicReload="true"/>
+                <List class="self" method="get_action_list" dynamicReload="true"/>
                 <CallbackMethod>menuChanged</CallbackMethod>
             </Field>
         </ConfigUI>

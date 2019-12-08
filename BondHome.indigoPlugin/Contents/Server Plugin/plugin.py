@@ -37,17 +37,6 @@ class Plugin(indigo.PluginBase):
             self.logger.debug(u"closedPrefsConfigUi, logLevel = {}".format(self.logLevel))        
 
     ########################################
-        
-    def runConcurrentThread(self):
-        self.logger.debug(u"runConcurrentThread starting")
-        try:
-            while True:
-                self.sleep(5.0)
-
-        except self.StopThread:
-            self.logger.debug(u"runConcurrentThread ending")
-            pass
-
                 
     def deviceStartComm(self, dev):
         self.logger.info(u"{}: Starting {} Device {}".format(dev.name, dev.deviceTypeId, dev.id))
@@ -130,27 +119,33 @@ class Plugin(indigo.PluginBase):
         retList.sort(key=lambda tup: tup[1])
         return retList
 
-    def get_command_list(self, filter="", valuesDict=None, typeId="", targetId=0):
-        self.logger.threaddebug("get_command_list: typeId = {}, targetId = {}, filter = {}, valuesDict = {}".format(typeId, targetId, filter, valuesDict))
+    def get_action_list(self, filter="", valuesDict=None, typeId="", targetId=0):
+        self.logger.threaddebug("get_action_list: typeId = {}, targetId = {}, filter = {}, valuesDict = {}".format(typeId, targetId, filter, valuesDict))
         retList = []
-        if len(valuesDict) > 1:                # called from Devices.xml
-            bridge = valuesDict.get("bridge", None)
-            self.logger.threaddebug("get_command_list: bridge = {}".format(bridge))
-            if not bridge:
-                return retList
-            address = valuesDict.get("address", None)
-            self.logger.threaddebug("get_command_list: address = {}".format(address))
-            if not address:
-                return retList
-        else:                                   # called from Actions.xml
-            dev = indigo.devices[targetId]
-            address = dev.address
-            bridge = dev.pluginProps.get("bridge", None)
-            if not bridge:
-                return retList
-            
+        bridge = valuesDict.get("bridge", None)
+        self.logger.threaddebug("get_action_list: bridge = {}".format(bridge))
+        if not bridge:
+            return retList
+        address = valuesDict.get("address", None)
+        self.logger.threaddebug("get_action_list: address = {}".format(address))
+        if not address:
+            return retList            
         action_list = self.bridge_data[int(bridge)][address]['actions']
-        self.logger.debug("get_command_list: action_list = {}".format(action_list))
+        self.logger.debug("get_action_list: action_list = {}".format(action_list))
+        for cmd in action_list:
+            retList.append((cmd, cmd))
+        return retList
+
+    def get_action_list_by_device(self, filter="", valuesDict=None, typeId="", targetId=0):
+        self.logger.threaddebug("get_action_list_by_device: typeId = {}, targetId = {}, filter = {}, valuesDict = {}".format(typeId, targetId, filter, valuesDict))
+        retList = []
+        dev = indigo.devices[targetId]
+        address = dev.address
+        bridge = dev.pluginProps.get("bridge", None)
+        if not bridge:
+            return retList
+        action_list = self.bridge_data[int(bridge)][address]['actions']
+        self.logger.debug("get_action_list_by_device: action_list = {}".format(action_list))
         for cmd in action_list:
             retList.append((cmd, cmd))
         return retList
@@ -159,36 +154,29 @@ class Plugin(indigo.PluginBase):
     def menuChanged(self, valuesDict = None, typeId = None, devId = None):
         return valuesDict
 
-    ########################################
-    # Plugin Actions object callbacks (pluginAction is an Indigo plugin action instance)    def startRaising(self, pluginAction, dev):
-    ########################################
-
-    def sendDeviceCommand(self, pluginAction, dev):
-        self.logger.debug(u"{}: sendDeviceCommand: {}".format(dev.name, pluginAction.props["command"]))
-        doDeviceCommand(dev, pluginAction.props["command"], payload={})
-
-
-    ########################################
-    #
-    # do request
-    #
-    ########################################
-
-    def doGet(self, dev, postURL):
-        if dev.deviceTypeId == "bondBridge":
-            host = dev.pluginProps["address"]
-            url = "http://{}/v2/devices/{}".format(host, postURL)
-            r = requests.get(url, headers=self.token_header)
-            return r.json()
+    #######################################
             
     def doDeviceCommand(self, dev, command, payload={}):
         bridge = indigo.devices[int(dev.pluginProps["bridge"])]
         host = bridge.address
         header = {'BOND-Token': bridge.pluginProps["token"]}
         url = "http://{}/v2/devices/{}/actions/{}".format(host, dev.pluginProps["address"], command)
-        self.logger.debug(u"{}: doDeviceCommand, url = {}".format(dev.name, url))
+        self.logger.debug(u"{}: doDeviceCommand, url = {}, payload = {}".format(dev.name, url, payload))
         requests.put(url, headers=header, json=payload)
     
+    ########################################
+    # Plugin Actions object callbacks (pluginAction is an Indigo plugin action instance)    def startRaising(self, pluginAction, dev):
+    ########################################
+
+    def sendDeviceCommand(self, pluginAction, dev):
+        argument =  indigo.activePlugin.substitute(pluginAction.props["argument"])
+        self.logger.debug(u"{}: sendDeviceCommand: {}, argument: {}".format(dev.name, pluginAction.props["command"], argument))
+        if len(argument):
+            self.doDeviceCommand(dev, pluginAction.props["command"], {"argument" : argument})
+        else:
+            self.doDeviceCommand(dev, pluginAction.props["command"])
+
+
     ########################################
     # Relay / Dimmer / Shade Action callback
     ########################################
@@ -196,22 +184,13 @@ class Plugin(indigo.PluginBase):
 
         ###### TURN ON ######
         if action.deviceAction == indigo.kDeviceAction.TurnOn:
-            self.logger.debug(u"{}: TurnOn".format(dev.name))
-            self.doDeviceCommand(dev, "Open")
+            self.doDeviceCommand(dev, dev.pluginProps["on_cmd"])
             dev.updateStateOnServer("onOffState", True)
             
         ###### TURN OFF ######
         elif action.deviceAction == indigo.kDeviceAction.TurnOff:
-            self.logger.debug(u"{}: TurnOff".format(dev.name))
-            self.doDeviceCommand(dev, "Close")
+            self.doDeviceCommand(dev, dev.pluginProps["off_cmd"])
             dev.updateStateOnServer("onOffState", False)
-
-        ###### TOGGLE ######
-        elif action.deviceAction == indigo.kDeviceAction.Toggle:
-            self.logger.debug(u"{}: Toggle".format(dev.name))
-            self.doDeviceCommand(dev, "Toggle")
-            dev.updateStateOnServer("onOffState", not dev.onState)
-
 
     ######################
     # Fan Action callback
@@ -220,15 +199,13 @@ class Plugin(indigo.PluginBase):
         
         ###### TURN ON ######
         if action.speedControlAction == indigo.kSpeedControlAction.TurnOn:
-            self.logger.debug(u"{}: TurnOn".format(dev.name))
+            self.doDeviceCommand(dev, dev.pluginProps["on_cmd"])
+            dev.updateStateOnServer("onOffState", True)
 
         ###### TURN OFF ######
         elif action.speedControlAction == indigo.kSpeedControlAction.TurnOff:
-            self.logger.debug(u"{}: TurnOff".format(dev.name))
-
-        ###### TOGGLE ######
-        elif action.speedControlAction == indigo.kSpeedControlAction.Toggle:
-            self.logger.debug(u"{}: Toggle".format(dev.name))
+            self.doDeviceCommand(dev, dev.pluginProps["off_cmd"])
+            dev.updateStateOnServer("onOffState", False)
             
         ###### SET SPEED INDEX ######
         elif action.speedControlAction == indigo.kSpeedControlAction.SetSpeedIndex:

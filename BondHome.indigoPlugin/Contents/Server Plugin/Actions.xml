@@ -7,9 +7,18 @@
         <ConfigUI>
             <Field id="command" type="menu">
                 <Label>Command:</Label>
-                <List class="self" method="get_command_list" dynamicReload="true"/>
+                <List class="self" method="get_action_list_by_device" dynamicReload="true"/>
                 <CallbackMethod>menuChanged</CallbackMethod>
             </Field>
+            <Field id="argument" type="textfield">
+                <Label>Command Argument:</Label>
+            </Field>
+			<Field id="argumentNote1" type="label" fontSize="small" fontColor="darkgray">
+				<Label>Some device commands, such as 'SetSpeed' for ceiling fans, require an argument.  Leave blank if not required.</Label>
+			</Field>
+			<Field id="argumentNote2" type="label" fontSize="small" fontColor="darkgray">
+				<Label>Variable and Device State Substitution is enabled for this field. Use the format %%v:12345%% for variables and %%d:12345:someStateId%% for device states.</Label>
+			</Field>
         </ConfigUI>
 	</Action>
 </Actions>
