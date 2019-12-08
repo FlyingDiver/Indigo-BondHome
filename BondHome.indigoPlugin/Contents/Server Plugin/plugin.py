@@ -80,7 +80,7 @@ class Plugin(indigo.PluginBase):
                     device_data[key] = req.json()
                 
             self.bridge_data[dev.id] = device_data
-            self.logger.debug(json.dumps(self.bridge_data, sort_keys=True, indent=4, separators=(',', ': ')))
+            self.logger.threaddebug(json.dumps(self.bridge_data, sort_keys=True, indent=4, separators=(',', ': ')))
                     
                         
         elif dev.deviceTypeId == "bondShade":
@@ -105,7 +105,7 @@ class Plugin(indigo.PluginBase):
     ########################################
 
     def get_bridge_list(self, filter="", valuesDict=None, typeId="", targetId=0):
-        self.logger.threaddebug("get_gateway_list: typeId = {}, targetId = {}, filter = {}, valuesDict = {}".format(typeId, targetId, filter, valuesDict))
+        self.logger.threaddebug("get_bridge_list: typeId = {}, targetId = {}, filter = {}, valuesDict = {}".format(typeId, targetId, filter, valuesDict))
         retList = []
         for dev in indigo.devices.iter("self.bondBridge"):
             self.logger.debug(u"get_bridge_list adding: {}".format(dev.name))         
@@ -122,7 +122,6 @@ class Plugin(indigo.PluginBase):
             return retList
             
         bridge_info = self.bridge_data[int(bridge)]
-        self.logger.threaddebug("get_device_list: bridge_info = {}".format(bridge_info))
         for dev_key, dev_info in bridge_info.iteritems():
             self.logger.threaddebug("get_device_list: dev_key = {}, dev_info = {}".format(dev_key, dev_info))
             if dev_info["type"] == filter:
@@ -134,12 +133,8 @@ class Plugin(indigo.PluginBase):
     def get_command_list(self, filter="", valuesDict=None, typeId="", targetId=0):
         self.logger.threaddebug("get_command_list: typeId = {}, targetId = {}, filter = {}, valuesDict = {}".format(typeId, targetId, filter, valuesDict))
         retList = []
-        if targetId:
-            dev = indigo.devices[targetId]
-            bridge = int(dev.pluginProps["bridge"])
-            address = dev.address
-        else:
-            bridge = int(valuesDict.get("bridge", None))
+        if len(valuesDict) > 1:                # called from Devices.xml
+            bridge = valuesDict.get("bridge", None)
             self.logger.threaddebug("get_command_list: bridge = {}".format(bridge))
             if not bridge:
                 return retList
@@ -147,8 +142,14 @@ class Plugin(indigo.PluginBase):
             self.logger.threaddebug("get_command_list: address = {}".format(address))
             if not address:
                 return retList
+        else:                                   # called from Actions.xml
+            dev = indigo.devices[targetId]
+            address = dev.address
+            bridge = dev.pluginProps.get("bridge", None)
+            if not bridge:
+                return retList
             
-        action_list = self.bridge_data[bridge][address]['actions']
+        action_list = self.bridge_data[int(bridge)][address]['actions']
         self.logger.debug("get_command_list: action_list = {}".format(action_list))
         for cmd in action_list:
             retList.append((cmd, cmd))
@@ -164,7 +165,7 @@ class Plugin(indigo.PluginBase):
 
     def sendDeviceCommand(self, pluginAction, dev):
         self.logger.debug(u"{}: sendDeviceCommand: {}".format(dev.name, pluginAction.props["command"]))
-        doDeviceCommand(dev, pluginAction.props["command"], payload={}):
+        doDeviceCommand(dev, pluginAction.props["command"], payload={})
 
 
     ########################################
