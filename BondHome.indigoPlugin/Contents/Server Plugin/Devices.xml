@@ -15,8 +15,9 @@
      </Device>
 
     <Device id="bondDevice" type="custom">
-        <Name>Bond Home Device</Name>
+        <Name>Bond Generic Device</Name>
         <ConfigUI>
+			<Field id="SupportsStatusRequest" type="checkbox" defaultValue="false" hidden="true" />
             <Field id="bridge" type="menu">
                 <Label>Bridge:</Label>
                 <List class="self" method="get_bridge_list" dynamicReload="true"/>
@@ -29,14 +30,54 @@
             </Field>
         </ConfigUI>
         <States>
+            <State id="status" readonly="true">
+                <ValueType >String</ValueType>
+                <TriggerLabel>Status</TriggerLabel>
+                <ControlPageLabel>Status</ControlPageLabel>
+            </State>
+            <State id="last_command" readonly="true">
+                <ValueType >String</ValueType>
+                <TriggerLabel>Last Command</TriggerLabel>
+                <ControlPageLabel>Last Command</ControlPageLabel>
+            </State>
+        </States>
+        <UiDisplayStateId>status</UiDisplayStateId>
+    </Device>
+    <Device id="bondRelay" type="relay">
+        <Name>Bond Relay Device</Name>
+        <ConfigUI>
+			<Field id="SupportsStatusRequest" type="checkbox" defaultValue="false" hidden="true" />
+            <Field id="bridge" type="menu">
+                <Label>Bridge:</Label>
+                <List class="self" method="get_bridge_list" dynamicReload="true"/>
+                <CallbackMethod>menuChanged</CallbackMethod>
+            </Field>
+            <Field id="address" type="menu">
+                <Label>Device:</Label>
+                <List class="self" method="get_device_list" dynamicReload="true"/>
+                <CallbackMethod>menuChanged</CallbackMethod>
+            </Field>
+            <Field id="on_command" type="menu">
+                <Label>On Command:</Label>
+                <List class="self" method="get_action_list" dynamicReload="true"/>
+                <CallbackMethod>menuChanged</CallbackMethod>
+            </Field>
+            <Field id="off_command" type="menu">
+                <Label>Off Command:</Label>
+                <List class="self" method="get_action_list" dynamicReload="true"/>
+                <CallbackMethod>menuChanged</CallbackMethod>
+            </Field>
+            <Field id="repeat" type="textfield" defaultValue="1">
+                <Label>Repeat:</Label>
+				<Description>How many times to send commands</Description>
+            </Field>
+        </ConfigUI>
         <States>
             <State id="status" readonly="true">
                 <ValueType >String</ValueType>
                 <TriggerLabel>Status</TriggerLabel>
                 <ControlPageLabel>Status</ControlPageLabel>
             </State>
-        </States>
-        <UiDisplayStateId>status</UiDisplayStateId>
             <State id="last_command" readonly="true">
                 <ValueType >String</ValueType>
                 <TriggerLabel>Last Command</TriggerLabel>

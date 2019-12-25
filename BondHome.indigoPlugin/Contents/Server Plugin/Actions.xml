@@ -1,7 +1,7 @@
 <?xml version="1.0"?>
 <Actions>
     <SupportURL>https://forums.indigodomo.com/viewforum.php?f=295</SupportURL>
-	<Action id="sendDeviceCommand" deviceFilter="self.bondDevice">
+	<Action id="sendDeviceCommand" deviceFilter="self">
 		<Name>Send Device Command</Name>
 		<CallbackMethod>sendDeviceCommand</CallbackMethod>
         <ConfigUI>
