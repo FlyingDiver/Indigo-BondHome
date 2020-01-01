@@ -145,7 +145,10 @@ class Plugin(indigo.PluginBase):
         argument =  indigo.activePlugin.substitute(pluginAction.props["argument"])
         self.logger.debug(u"{}: sendDeviceCommand: {}, argument: {}".format(dev.name, pluginAction.props["command"], argument))
         if len(argument):
-            self.doDeviceCommand(dev, pluginAction.props["command"], {"argument" : argument})
+            try:
+                self.doDeviceCommand(dev, pluginAction.props["command"], {"argument" : int(argument)})
+            except:
+                self.logger.error(u"{}: sendDeviceCommand: {}, argument: {} - cannot convert to integer".format(dev.name, pluginAction.props["command"], argument))        
         else:
             self.doDeviceCommand(dev, pluginAction.props["command"])
 
