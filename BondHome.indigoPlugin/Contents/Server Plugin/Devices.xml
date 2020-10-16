@@ -12,6 +12,14 @@
 				<Label>Local Token:</Label>
 			</Field>
         </ConfigUI>
+        <States>
+            <State id="status" readonly="true">
+                <ValueType >String</ValueType>
+                <TriggerLabel>Status</TriggerLabel>
+                <ControlPageLabel>Status</ControlPageLabel>
+            </State>
+        </States>
+        <UiDisplayStateId>status</UiDisplayStateId>
      </Device>
 
     <Device id="bondDevice" type="custom">

@@ -50,15 +50,19 @@ class Plugin(indigo.PluginBase):
                 resp.raise_for_status()
             except requests.exceptions.ConnectionError, e:
                 self.logger.error(u"{}: Connection Error: {}".format(dev.name, e))
+                dev.updateStateOnServer("status", "Connection Error")
                 return     
             except requests.exceptions.Timeout, e:
                 self.logger.error(u"{}: Timeout Error: {}".format(dev.name, e))        
+                dev.updateStateOnServer("status", "Timeout Error")
                 return     
             except requests.exceptions.TooManyRedirects, e:
                 self.logger.error(u"{}: TooManyRedirects Error: {}".format(dev.name, e))        
+                dev.updateStateOnServer("status", "Redirect Error")
                 return     
             except requests.exceptions.HTTPError, e:
                 self.logger.error(u"{}: HTTP Error: {}".format(dev.name, e))        
+                dev.updateStateOnServer("status", "Other Error")
                 return
                 
             device_data = {}
@@ -69,7 +73,8 @@ class Plugin(indigo.PluginBase):
                     device_data[key] = req.json()
                 
             self.bridge_data[dev.id] = device_data
-            self.logger.threaddebug(json.dumps(self.bridge_data, sort_keys=True, indent=4, separators=(',', ': ')))
+            self.logger.debug("{}: Bridge Data:\n{}".format(dev.name, json.dumps(self.bridge_data, sort_keys=True, indent=4, separators=(',', ': '))))
+            dev.updateStateOnServer("status", "OK - {}".format(len(self.bridge_data[dev.id])))
                     
                         
         elif dev.deviceTypeId in ["bondDevice", "bondRelay"]:
@@ -80,8 +85,11 @@ class Plugin(indigo.PluginBase):
 
             
     def deviceStopComm(self, dev):
-        self.logger.info(u"{}: Stopping {} Device {}".format( dev.name, dev.deviceTypeId, dev.id))
-
+        self.logger.info(u"{}: Stopping {} Device {}".format(dev.name, dev.deviceTypeId, dev.id))
+        assert dev.id in self.bridge_data
+        self.bridge_data.remove(dev.id)
+        dev.updateStateOnServer("status", "Stopped")
+        
     ########################################
     #
     # callbacks from device creation UI
