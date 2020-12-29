@@ -86,9 +86,16 @@ class Plugin(indigo.PluginBase):
             
     def deviceStopComm(self, dev):
         self.logger.info(u"{}: Stopping {} Device {}".format(dev.name, dev.deviceTypeId, dev.id))
-        assert dev.id in self.bridge_data
-        self.bridge_data.remove(dev.id)
-        dev.updateStateOnServer("status", "Stopped")
+
+        if dev.deviceTypeId == "bondBridge":
+            dev.updateStateOnServer("status", "Stopped")
+
+        elif dev.deviceTypeId in ["bondDevice", "bondRelay"]:
+            pass
+            
+        else:
+            self.logger.error(u"{}: deviceStopComm: Unknown device type: {}".format(dev.name, dev.deviceTypeId))
+
         
     ########################################
     #

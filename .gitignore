@@ -134,3 +134,5 @@ dmypy.json
 /BondHome.indigoPlugin.zip
 
 Bond Local API.webloc
+
+.DS_Store
