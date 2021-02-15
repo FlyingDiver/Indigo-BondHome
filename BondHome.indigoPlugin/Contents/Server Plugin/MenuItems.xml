@@ -1,12 +1,34 @@
 <?xml version="1.0"?>
-<!-- If your plugin wants to add menu items to it's submenu off the new Extensions menu,
-	 define them here. Each should have a unique menu id, a Name, and an Action. The last
-	 is a method name in your python file that will be called when the user selects that
-	 menu item. Note - nothing will be returned to the client, so if you need to communicate
-	 back to the user you can post information into the Event Log.
--->
-
 <MenuItems>
     <SupportURL>https://forums.indigodomo.com/viewforum.php?f=295</SupportURL>
+    <MenuItem id="setCommandRepeatMenu" deviceFilter="self">
+		<Name>Set Command Repeats</Name>
+		<CallbackMethod>setCommandRepeatMenu</CallbackMethod>
+        <ConfigUI>
+            <Field id="bridge" type="menu">
+                <Label>Bridge:</Label>
+                <List class="self" method="get_bridge_list" dynamicReload="true"/>
+                <CallbackMethod>menuChanged</CallbackMethod>
+            </Field>
+            <Field id="device" type="menu">
+                <Label>Device:</Label>
+                <List class="self" method="get_device_list" dynamicReload="true"/>
+                <CallbackMethod>menuChanged</CallbackMethod>
+            </Field>
+            <Field id="command" type="menu">
+                <Label>Command:</Label>
+                <List class="self" method="get_action_list" dynamicReload="true"/>
+                <CallbackMethod>menuChanged</CallbackMethod>
+            </Field>
+            <Field id="repeats" type="textfield">
+                <Label>Repeat Count:</Label>
+            </Field>
+        </ConfigUI>
+    </MenuItem>
+
+    <MenuItem id="dumpDeviceData">
+    	<Name>Write Device Data to Log</Name>
+    	<CallbackMethod>dumpDeviceData</CallbackMethod>
+    </MenuItem>
 </MenuItems>
 

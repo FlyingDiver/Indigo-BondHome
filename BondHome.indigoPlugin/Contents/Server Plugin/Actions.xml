@@ -1,10 +1,20 @@
 <?xml version="1.0"?>
 <Actions>
     <SupportURL>https://forums.indigodomo.com/viewforum.php?f=295</SupportURL>
-	<Action id="sendDeviceCommand" deviceFilter="self">
+	<Action id="sendDeviceCommand">
 		<Name>Send Device Command</Name>
 		<CallbackMethod>sendDeviceCommand</CallbackMethod>
         <ConfigUI>
+            <Field id="bridge" type="menu">
+                <Label>Bridge:</Label>
+                <List class="self" method="get_bridge_list" dynamicReload="true"/>
+                <CallbackMethod>menuChanged</CallbackMethod>
+            </Field>
+            <Field id="device" type="menu">
+                <Label>Device:</Label>
+                <List class="self" method="get_device_list" dynamicReload="true"/>
+                <CallbackMethod>menuChanged</CallbackMethod>
+            </Field>
             <Field id="command" type="menu">
                 <Label>Command:</Label>
                 <List class="self" method="get_action_list" dynamicReload="true"/>
