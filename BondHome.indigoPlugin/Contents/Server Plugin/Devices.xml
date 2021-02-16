@@ -11,12 +11,6 @@
 			<Field id="token" type="textfield" defaultValue="" tooltip="Local Token">
 				<Label>Local Token:</Label>
 			</Field>
-            <Field id="enableUDP" type="checkbox" defaultValue="true">
-                <Label>Enable Bond Push Protocol:</Label>
-            </Field>
-            <Field id="udpNote" type="label" fontSize="small" fontColor="darkgray">
-                <Label>Enables the UDP broadcast from the Bond device for push updates.</Label>
-            </Field>
         </ConfigUI>
         <States>
             <State id="status" readonly="true">
@@ -78,50 +72,18 @@
         <UiDisplayStateId>status</UiDisplayStateId>
      </Device>
 
-    <Device id="bondDevice" type="custom">
-        <Name>Bond Generic Device</Name>
+    <Device id="bondDevice" type="relay">
+        <Name>Bond Device</Name>
         <ConfigUI>
-			<Field id="SupportsStatusRequest" type="checkbox" defaultValue="false" hidden="true" />
-            <Field id="bridge" type="menu">
-                <Label>Bridge:</Label>
-                <List class="self" method="get_bridge_list" dynamicReload="true"/>
-                <CallbackMethod>menuChanged</CallbackMethod>
-            </Field>
+			<Field id="SupportsStatusRequest" type="checkbox" defaultValue="true" hidden="true" />
+			<Field id="bond_type" type="textfield" hidden="true" />
+
             <Field id="address" type="menu">
                 <Label>Device:</Label>
                 <List class="self" method="get_device_list" dynamicReload="true"/>
                 <CallbackMethod>menuChanged</CallbackMethod>
             </Field>
-        </ConfigUI>
-        <States>
-            <State id="status" readonly="true">
-                <ValueType >String</ValueType>
-                <TriggerLabel>Status</TriggerLabel>
-                <ControlPageLabel>Status</ControlPageLabel>
-            </State>
-            <State id="last_command" readonly="true">
-                <ValueType >String</ValueType>
-                <TriggerLabel>Last Command</TriggerLabel>
-                <ControlPageLabel>Last Command</ControlPageLabel>
-            </State>
-        </States>
-        <UiDisplayStateId>status</UiDisplayStateId>
-    </Device>
-    <Device id="bondRelay" type="relay">
-        <Name>Bond Relay Device</Name>
-        <ConfigUI>
-			<Field id="SupportsStatusRequest" type="checkbox" defaultValue="false" hidden="true" />
-            <Field id="bridge" type="menu">
-                <Label>Bridge:</Label>
-                <List class="self" method="get_bridge_list" dynamicReload="true"/>
-                <CallbackMethod>menuChanged</CallbackMethod>
-            </Field>
-            <Field id="address" type="menu">
-                <Label>Device:</Label>
-                <List class="self" method="get_device_list" dynamicReload="true"/>
-                <CallbackMethod>menuChanged</CallbackMethod>
-            </Field>
-            <Field id="on_command" type="menu">
+             <Field id="on_command" type="menu">
                 <Label>On Command:</Label>
                 <List class="self" method="get_action_list" dynamicReload="true"/>
                 <CallbackMethod>menuChanged</CallbackMethod>
@@ -131,11 +93,7 @@
                 <List class="self" method="get_action_list" dynamicReload="true"/>
                 <CallbackMethod>menuChanged</CallbackMethod>
             </Field>
-            <Field id="repeat" type="textfield" defaultValue="1">
-                <Label>Repeat:</Label>
-				<Description>How many times to send commands</Description>
-            </Field>
-        </ConfigUI>
+       </ConfigUI>
         <States>
             <State id="status" readonly="true">
                 <ValueType >String</ValueType>
@@ -150,5 +108,4 @@
         </States>
         <UiDisplayStateId>status</UiDisplayStateId>
     </Device>
-     
 </Devices>

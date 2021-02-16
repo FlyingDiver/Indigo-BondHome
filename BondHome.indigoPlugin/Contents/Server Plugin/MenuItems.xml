@@ -1,15 +1,10 @@
 <?xml version="1.0"?>
 <MenuItems>
     <SupportURL>https://forums.indigodomo.com/viewforum.php?f=295</SupportURL>
-    <MenuItem id="setCommandRepeatMenu" deviceFilter="self">
+    <MenuItem id="setCommandRepeatMenu">
 		<Name>Set Command Repeats</Name>
 		<CallbackMethod>setCommandRepeatMenu</CallbackMethod>
         <ConfigUI>
-            <Field id="bridge" type="menu">
-                <Label>Bridge:</Label>
-                <List class="self" method="get_bridge_list" dynamicReload="true"/>
-                <CallbackMethod>menuChanged</CallbackMethod>
-            </Field>
             <Field id="device" type="menu">
                 <Label>Device:</Label>
                 <List class="self" method="get_device_list" dynamicReload="true"/>
@@ -24,11 +19,6 @@
                 <Label>Repeat Count:</Label>
             </Field>
         </ConfigUI>
-    </MenuItem>
-
-    <MenuItem id="dumpDeviceData">
-    	<Name>Write Device Data to Log</Name>
-    	<CallbackMethod>dumpDeviceData</CallbackMethod>
     </MenuItem>
 </MenuItems>
 
