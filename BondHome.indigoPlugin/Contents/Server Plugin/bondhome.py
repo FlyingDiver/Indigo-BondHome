@@ -96,6 +96,7 @@ class BondHome(object):
         self.logger.debug(u"device_action, url = {}, payload = {}".format(url, payload))
         try:
             resp = requests.put(url, headers=self.token_header, json=payload)
+            resp.raise_for_status()
         except:
             raise
         self.logger.debug(u"device_action, resp = {}".format(resp))
@@ -123,6 +124,17 @@ class BondHome(object):
         except:
             raise            
         return resp.json()
+
+    def set_bridge_info(self, device_id, data):
+        
+        url = "http://{}/v2/bridge".format(self.address)
+        data = {"reps": int(reps)}
+        try:
+            resp = requests.patch(url, headers=self.token_header, params=data)
+            resp.raise_for_status()
+        except:
+            raise
+        return resp.json()
         
     def get_device_list(self):
         self.logger.debug(u"get_device_list()")
@@ -145,8 +157,40 @@ class BondHome(object):
         
         url = "http://{}/v2/devices/{}".format(self.address, device_id)
         try:
-            req = requests.get(url, headers=self.token_header)
+            resp = requests.get(url, headers=self.token_header)
+            resp.raise_for_status()
         except:
             raise
-        return req.json()
+        return resp.json()
+                                
+    def get_device_command_list(self, device_id):
+        
+        url = "http://{}/v2/devices/{}/commands".format(self.address, device_id)
+        try:
+            resp = requests.get(url, headers=self.token_header)
+            resp.raise_for_status()
+        except:
+            raise
+        return resp.json()
+                                    
+    def get_device_command(self, device_id, command_id):
+        
+        url = "http://{}/v2/devices/{}/commands/{}".format(self.address, device_id, command_id)
+        try:
+            resp = requests.get(url, headers=self.token_header)
+            resp.raise_for_status()
+        except:
+            raise
+        return resp.json()
+                                
+    def set_device_command_reps(self, device_id, command_id, reps):
+        
+        url = "http://{}/v2/devices/{}/commands/{}/signal".format(self.address, device_id, command_id)
+        data = {"reps": int(reps)}
+        try:
+            resp = requests.patch(url, headers=self.token_header, params=data)
+            resp.raise_for_status()
+        except:
+            raise
+        return resp.json()
                                 

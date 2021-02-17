@@ -2,7 +2,7 @@
 <Devices>
     <SupportURL>https://forums.indigodomo.com/viewforum.php?f=295</SupportURL>
 
-    <Device id="bondBridge" type="custom">
+    <Device id="bondBridge" type="dimmer">
         <Name>Bond Home Bridge</Name>
         <ConfigUI>
             <Field id="address" type="textfield"  defaultValue="" tooltip="Enter IP address or Hostname of gateway.">
@@ -57,11 +57,6 @@
                 <ValueType >String</ValueType>
                 <TriggerLabel>Location</TriggerLabel>
                 <ControlPageLabel>Location</ControlPageLabel>
-            </State>
-            <State id="bluelight" readonly="true">
-                <ValueType >String</ValueType>
-                <TriggerLabel>Blue Light</TriggerLabel>
-                <ControlPageLabel>Blue Light</ControlPageLabel>
             </State>
             <State id="devcount" readonly="true">
                 <ValueType >String</ValueType>
