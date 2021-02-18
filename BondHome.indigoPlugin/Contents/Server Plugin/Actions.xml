@@ -1,9 +1,9 @@
 <?xml version="1.0"?>
 <Actions>
     <SupportURL>https://forums.indigodomo.com/viewforum.php?f=295</SupportURL>
-	<Action id="sendDeviceCommand">
+	<Action id="doDeviceAction">
 		<Name>Send Device Command</Name>
-		<CallbackMethod>sendDeviceCommand</CallbackMethod>
+		<CallbackMethod>doDeviceAction</CallbackMethod>
         <ConfigUI>
             <Field id="bridge" type="menu">
                 <Label>Bridge:</Label>
@@ -29,6 +29,30 @@
 			<Field id="argumentNote2" type="label" fontSize="small" fontColor="darkgray">
 				<Label>Variable and Device State Substitution is enabled for this field. Use the format %%v:12345%% for variables and %%d:12345:someStateId%% for device states.</Label>
 			</Field>
+        </ConfigUI>
+	</Action>
+	<Action id="setCommandRepeatAction">
+		<Name>Set Device Command Repeats</Name>
+		<CallbackMethod>setCommandRepeatAction</CallbackMethod>
+        <ConfigUI>
+            <Field id="bridge" type="menu">
+                <Label>Bridge:</Label>
+                <List class="self" method="get_bridge_list" dynamicReload="true"/>
+                <CallbackMethod>menuChanged</CallbackMethod>
+            </Field>
+            <Field id="device" type="menu">
+                <Label>Device:</Label>
+                <List class="self" method="get_device_list" dynamicReload="true"/>
+                <CallbackMethod>menuChanged</CallbackMethod>
+            </Field>
+            <Field id="command" type="menu">
+                <Label>Command:</Label>
+                <List class="self" method="get_action_list" dynamicReload="true"/>
+                <CallbackMethod>menuChanged</CallbackMethod>
+            </Field>
+            <Field id="repeats" type="textfield">
+                <Label>Repeats:</Label>
+            </Field>
         </ConfigUI>
 	</Action>
 </Actions>

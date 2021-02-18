@@ -91,7 +91,7 @@ class BondHome(object):
     # Commands to the Bridge
     ########################################
     
-    def device_action(device_id, action, payload={}):
+    def device_action(self, device_id, action, payload={}):
         url = "http://{}/v2/devices/{}/actions/{}".format(self.address, device_id, action)
         self.logger.debug(u"device_action, url = {}, payload = {}".format(url, payload))
         try:
@@ -125,12 +125,11 @@ class BondHome(object):
             raise            
         return resp.json()
 
-    def set_bridge_info(self, device_id, data):
+    def set_bridge_info(self, data):
         
         url = "http://{}/v2/bridge".format(self.address)
-        data = {"reps": int(reps)}
         try:
-            resp = requests.patch(url, headers=self.token_header, params=data)
+            resp = requests.patch(url, headers=self.token_header, json=data)
             resp.raise_for_status()
         except:
             raise
@@ -183,12 +182,11 @@ class BondHome(object):
             raise
         return resp.json()
                                 
-    def set_device_command_reps(self, device_id, command_id, reps):
+    def set_device_command_signal(self, device_id, command_id, payload):
         
         url = "http://{}/v2/devices/{}/commands/{}/signal".format(self.address, device_id, command_id)
-        data = {"reps": int(reps)}
         try:
-            resp = requests.patch(url, headers=self.token_header, params=data)
+            resp = requests.patch(url, headers=self.token_header, json=payload)
             resp.raise_for_status()
         except:
             raise

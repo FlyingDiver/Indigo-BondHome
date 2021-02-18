@@ -35,9 +35,9 @@ class Plugin(indigo.PluginBase):
     def startup(self):
         self.logger.info(u"Starting BondHome")
 
-        self.bond_bridges = {}          # dict of bridge devices, keyed by Indigo DevID, value id BondHome object
-        self.bond_devices = {}          # dict of "client" devices, keyed by Bond ID, value is Indigo device.id        
-        self.known_devices = {}         # dict of client devices, keyed by device address, value is dict returned by get_device()
+        self.bond_bridges = {}          # dict of bridge devices, keyed by BondID, value id BondHome object
+        self.bond_devices = {}          # dict of "client" devices, keyed by (bond) device_ID, value is Indigo device.id        
+        self.known_devices = {}         # nested dict of client devices, keyed by BondID then device_ID, value is dict returned by get_device()
 
     def shutdown(self):
         self.logger.info(u"Stopping BondHome")
@@ -63,7 +63,19 @@ class Plugin(indigo.PluginBase):
             return (False, valuesDict, errorsDict)
         return (True, valuesDict)
 
-       
+
+    def getDeviceConfigUiValues(self, pluginProps, typeId, devId):
+        self.logger.debug(u"getDeviceConfigUiValues, typeId = {}, devId = {}, pluginProps = {}".format(typeId, devId, pluginProps))
+        valuesDict = pluginProps
+        errorMsgDict = indigo.Dict()
+
+        # Pre-load the first bridge for any non-bridge device, if not already specified
+        if typeId != 'bondBridge' and not valuesDict.get('bridge', None) and len(self.bond_bridges):
+            valuesDict['bridge'] = self.bond_bridges.keys()[0]
+            
+        return (valuesDict, errorMsgDict)
+             
+        
     def deviceStartComm(self, device):
         self.logger.info(u"{}: Starting {} Device {}".format(device.name, device.deviceTypeId, device.id))
 
@@ -78,14 +90,13 @@ class Plugin(indigo.PluginBase):
                 self.logger.debug(u"{}: BondHome __init__ error: {}".format(device.name,  err))
                 device.updateStateImageOnServer(indigo.kStateImageSel.SensorTripped)
             else:
-                self.bond_bridges[device.id] = bridge
                 version = bridge.get_bridge_version()
                 self.logger.debug(u"{}: BondHome version: {}".format(device.name,  version))
+
                 info = bridge.get_bridge_info()
                 self.logger.debug(u"{}: BondHome info: {}".format(device.name,  info))
 
                 stateList = [
-                    { 'key':'status',           'value':'OK'},
                     { 'key':'fw_ver',           'value':version['fw_ver']},
                     { 'key':'fw_date',          'value':version['fw_date']},
                     { 'key':'uptime_s',         'value':version['uptime_s']},
@@ -97,12 +108,14 @@ class Plugin(indigo.PluginBase):
                     { 'key':'brightnessLevel',  'value':info['bluelight']},
                ]
                 device.updateStatesOnServer(stateList)
-                device.updateStateImageOnServer(indigo.kStateImageSel.SensorOn)
+
+                bondID = version['bondid']
+                self.bond_bridges[bondID] = bridge
 
                 # get all the devices the bridge knows about
-                
+                self.known_devices[bondID] = {}
                 for bdev in bridge.get_device_list():
-                    self.known_devices[bdev] = bridge.get_device(bdev)
+                    self.known_devices[bondID][bdev] = bridge.get_device(bdev)
                 self.logger.debug(u"{}: known_devices:\n{}".format(device.name, self.known_devices))
             
                 # start up the BPUP socket connection
@@ -111,14 +124,13 @@ class Plugin(indigo.PluginBase):
                         
         elif device.deviceTypeId == "bondDevice":
             self.bond_devices[device.address] = device.id
-            self.logger.debug(u"{}: Updated self.bond_devices:\n{}".format(device.name, self.bond_devices))
-            
-            info = self.known_devices.get(device.address, None)
-            if info and not device.pluginProps.get('bond_type', None):
-                self.logger.debug(u"{}: Updating Device info:\n{}".format(device.name, info))
+            bondid = device.pluginProps['bridge']   
+            dev_info = self.known_devices[bondid].get(device.address, None)
+            if dev_info and not device.pluginProps.get('bond_type', None):
+                self.logger.debug(u"{}: Updating Device info:\n{}".format(device.name, dev_info))
 
-                type = info.get('type', 'UN')
-                name = info.get('name', None)
+                type = dev_info.get('type', 'UN')
+                name = dev_info.get('name', None)
                 if name:
                     device.name = "{} ({})".format(name, device.address)
                 device.subModel = bond_types[type]
@@ -137,9 +149,8 @@ class Plugin(indigo.PluginBase):
         self.logger.info(u"{}: Stopping {} Device {}".format(device.name, device.deviceTypeId, device.id))
 
         if device.deviceTypeId == "bondBridge":
-            del self.bond_bridges[device.id]
-            device.updateStateOnServer("status", "Stopped")
-            device.updateStateImageOnServer(indigo.kStateImageSel.SensorOff)
+            bondID = device.states['bondid']
+            del self.bond_bridges[bondID]
 
         elif device.deviceTypeId == "bondDevice":
             self.logger.debug(u"{}: Skipping {} device".format(device.name,  device.deviceTypeId))
@@ -156,23 +167,30 @@ class Plugin(indigo.PluginBase):
  
     def receiveBPUP(self, data):
         self.logger.threaddebug("receiveBPUP: {}".format(data))
+        
     
-        bondID = data.get('id', None)
-        self.logger.threaddebug("Bond device id: {}".format(bondID))
+        bondID = data.get('B', None)
+        self.logger.threaddebug("Bond Bridge id: {}".format(bondID))
         if not bondID:
+            self.logger.warning("receiveBPUP: no Bond Bridge ID in {}".format(data))
+            return
+
+        deviceID = data.get('id', None)
+        self.logger.threaddebug("Bond device id: {}".format(deviceID))
+        if not deviceID:
             self.logger.warning("receiveBPUP: no Bond device ID in {}".format(data))
             return
         
-        devID = self.bond_devices.get(bondID, None)
-        self.logger.threaddebug("Indigo device id: {}".format(devID))
-        if not devID:
-            self.logger.threaddebug("receiveBPUP: no Indigo device for {}".format(bondID))
+        iDevID = self.bond_devices.get(deviceID, None)
+        self.logger.threaddebug("Indigo device id: {}".format(iDevID))
+        if not iDevID:
+            self.logger.threaddebug("receiveBPUP: no Indigo device for {}".format(deviceID))
             return
             
-        device = indigo.devices.get(devID, None)
+        device = indigo.devices.get(iDevID, None)
         self.logger.threaddebug("{}: Device ID: {}".format(device.name, device.id))
         if not device:
-            self.logger.warning("receiveBPUP: No Indigo device for {}".format(devID))
+            self.logger.warning("receiveBPUP: No Indigo device for {}".format(iDevID))
             return
         
         bond_type = device.pluginProps['bond_type']
@@ -203,15 +221,18 @@ class Plugin(indigo.PluginBase):
         retList = []
         for dev in indigo.devices.iter("self.bondBridge"):
             self.logger.threaddebug(u"get_bridge_list adding: {}".format(dev.name))         
-            retList.append((dev.id, dev.name))
+            retList.append((dev.states['bondid'], dev.name))
         retList.sort(key=lambda tup: tup[1])
         return retList
 
     def get_device_list(self, filter="", valuesDict=None, typeId="", targetId=0):
         self.logger.threaddebug("get_device_list: typeId = {}, targetId = {}, filter = {}, valuesDict = {}".format(typeId, targetId, filter, valuesDict))
         retList = []
-        
-        for dev_key, dev_info in self.known_devices.iteritems():
+        bondid = valuesDict.get("bridge", None)
+        if not bondid:
+            return retList
+
+        for dev_key, dev_info in self.known_devices[bondid].iteritems():
             retList.append((dev_key, dev_info["name"]))
         retList.sort(key=lambda tup: tup[1])
         return retList
@@ -219,29 +240,39 @@ class Plugin(indigo.PluginBase):
     def get_action_list(self, filter="", valuesDict=None, typeId="", targetId=0):
         self.logger.threaddebug("get_action_list: typeId = {}, targetId = {}, filter = {}, valuesDict = {}".format(typeId, targetId, filter, valuesDict))
         retList = []
-        if targetId:
-            
-            address = indigo.devices[targetId].address
+
+        bondid = valuesDict.get("bridge", None)
+        if not bondid:
+            return retList
+
+        if targetId:   
+            try:         
+                address = indigo.devices[targetId].address
+            except:
+                address = None
             if not address:
                 address = valuesDict.get("address", None)
-                if not address:
-                    return retList
 
         elif valuesDict.get("device", None):
-            address = valuesDict['device']
-            
+            address = valuesDict.get('device', None)
+        
         else:
+            address = None
+            
+        if not address:
             return retList
             
-        action_list = self.known_devices[address]['actions']
-        for cmd in action_list:
+        dev_info = self.known_devices[bondid][address]
+        for cmd in dev_info['actions']:
             retList.append((cmd, cmd))
         return retList
 
     # doesn't do anything, just needed to force other menus to dynamically refresh
     def menuChanged(self, valuesDict = None, typeId = None, devId = None):
+        self.logger.threaddebug("menuChanged: devId = {}, typeId = {}, valuesDict = {}".format(devId, typeId, valuesDict))
         return valuesDict
-    
+
+          
     ########################################
     # Relay Action callback
     ########################################
@@ -249,56 +280,65 @@ class Plugin(indigo.PluginBase):
     
         if action.deviceAction == indigo.kDeviceAction.TurnOn:
 
-            if device.deviceTypeId == "bondBridge":
-                self.bond_bridges[dev.id].set_bridge_info({"bluelight": 255})
+            if dev.deviceTypeId == "bondBridge":
+                bondID = dev.states['bondid']
+                self.bond_bridges[bondID].set_bridge_info({"bluelight": 255})
+                dev.updateStateOnServer(key='brightnessLevel', value=100)
 
-            elif device.deviceTypeId == "bondDevice":
-                self.doDeviceCommand(dev, dev.pluginProps["on_command"])
+            elif dev.deviceTypeId == "bondDevice":
+                self.sendDeviceAction(dev, dev.pluginProps["on_command"])
 
 
         elif action.deviceAction == indigo.kDeviceAction.TurnOff:
 
-            if device.deviceTypeId == "bondBridge":
-                self.bond_bridges[dev.id].set_bridge_info({"bluelight": 0})
+            if dev.deviceTypeId == "bondBridge":
+                bondID = dev.states['bondid']
+                self.bond_bridges[bondID].set_bridge_info({"bluelight": 0})
+                dev.updateStateOnServer(key='brightnessLevel', value=0)
 
-            elif device.deviceTypeId == "bondDevice":
-                self.doDeviceCommand(dev, dev.pluginProps["off_command"])
+            elif dev.deviceTypeId == "bondDevice":
+                self.sendDeviceAction(dev, dev.pluginProps["off_command"])
 
 
         elif action.deviceAction == indigo.kDeviceAction.SetBrightness:
         
-            if device.deviceTypeId == "bondBridge":
+            if dev.deviceTypeId == "bondBridge":
                 level = int(action.actionValue * 2.55)      # bluelight scale is 0-255
-                self.bond_bridges[dev.id].set_bridge_info({"bluelight": level})
+                bondID = dev.states['bondid']
+                self.bond_bridges[bondID].set_bridge_info({"bluelight": level})
+                dev.updateStateOnServer(key='brightnessLevel', value=action.actionValue)
 
-            elif device.deviceTypeId == "bondDevice":
+            elif dev.deviceTypeId == "bondDevice":
                 pass
 
 
         elif action.deviceAction == indigo.kDeviceAction.BrightenBy:            
-            newBrightness = device.brightness + action.actionValue
+            newBrightness = dev.brightness + action.actionValue
             if newBrightness > 100:
                 newBrightness = 100
 
-            if device.deviceTypeId == "bondBridge":
+            if dev.deviceTypeId == "bondBridge":
                 level = int(newBrightness * 2.55)      # bluelight scale is 0-255
-                self.bond_bridges[dev.id].set_bridge_info({"bluelight": level})
+                bondID = dev.states['bondid']
+                self.bond_bridges[bondID].set_bridge_info({"bluelight": level})
+                dev.updateStateOnServer(key='brightnessLevel', value=newBrightness)
 
-            elif device.deviceTypeId == "bondDevice":
+            elif dev.deviceTypeId == "bondDevice":
                 pass
                 
 
-
         elif action.deviceAction == indigo.kDeviceAction.DimBy:
-            newBrightness = device.brightness - action.actionValue
+            newBrightness = dev.brightness - action.actionValue
             if newBrightness < 0:
                 newBrightness = 0
 
-            if device.deviceTypeId == "bondBridge":
+            if dev.deviceTypeId == "bondBridge":
                 level = int(newBrightness * 2.55)      # bluelight scale is 0-255
-                self.bond_bridges[dev.id].set_bridge_info({"bluelight": level})
+                bondID = dev.states['bondid']
+                self.bond_bridges[bondID].set_bridge_info({"bluelight": level})
+                dev.updateStateOnServer(key='brightnessLevel', value=newBrightness)
 
-            elif device.deviceTypeId == "bondDevice":
+            elif dev.deviceTypeId == "bondDevice":
                 pass
                 
 
@@ -307,73 +347,68 @@ class Plugin(indigo.PluginBase):
     # Plugin Actions object callbacks (pluginAction is an Indigo plugin action instance)
     ########################################
 
-    def sendDeviceCommand(self, pluginAction, dev):
-        command = pluginAction.props["command"]
+    def getActionConfigUiValues(self, actionProps, typeId, devId):
+        self.logger.debug(u"getActionConfigUiValues, typeId = {}, devId = {}, actionProps = {}".format(typeId, devId, actionProps))
+        valuesDict = actionProps
+        errorMsgDict = indigo.Dict()
+
+        # Pre-load the first bridge device, if not already specified
+        if not valuesDict.get('bridge', None) and len(self.bond_bridges):
+            valuesDict['bridge'] = self.bond_bridges.keys()[0]
+            
+        return (valuesDict, errorMsgDict)
+             
+        
+    def doDeviceAction(self, pluginAction):
+        self.logger.debug(u"doDeviceAction, pluginAction = {}".format(pluginAction))
+        bridge = self.bond_bridges[pluginAction.props["bridge"]]
         argument =  indigo.activePlugin.substitute(pluginAction.props["argument"])
-        self.logger.debug(u"{}: sendDeviceCommand: {}, argument: {}".format(dev.name, command, argument))
         
         if len(argument):
-            self.doDeviceCommand(dev, command, payload={"argument" : int(argument)})
+            payload = {"argument" : int(argument)}
         else:
-            self.doDeviceCommand(dev, command, payload={})
-        
+            payload = {}
             
-    def doDeviceCommand(self, dev, command, payload):
-        self.logger.debug(u"{}: doDeviceCommand: {}".format(dev.name, command))
-        bridge = indigo.devices[int(dev.pluginProps["bridge"])]
-        bridge.device_action(dev.address, command, payload)
-        dev.updateStateOnServer(key="last_command", value=command)
+        bridge.device_action(pluginAction.props["device"], pluginAction.props["command"], payload)
 
+                
+
+    def setCommandRepeatAction(self, pluginAction):
+        self.logger.debug(u"setCommandRepeatAction: pluginAction: {}".format(pluginAction))
+
+        bridge = self.bond_bridges[pluginAction.props["bridge"]]
+        device  = pluginAction.props["device"]
+        command = pluginAction.props["command"]
+        try:
+            repeats = int(pluginAction.props["repeats"])
+        except:
+            self.logger.warning(u"setCommandRepeatAction: invalid repeat value: {}".format(pluginAction.props["repeats"]))
+            return False
+        
+        # now to find the action_id that goes with that command.  There's a glaring hole in the API in that the
+        # action list returned for the device is only names, not action_ids.
+
+        command_list = bridge.get_device_command_list(device)
+        for cmd_id in command_list:
+            if cmd_id == "_":
+                continue
+            cmd_info = bridge.get_device_command(device, cmd_id)
+            if cmd_info['action'] == command:
+                break
+        
+        # send the change command and check the result
+        payload = {"reps": int(repeats)}
+        result = bridge.set_device_command_signal(device, cmd_id, payload)
+        if result['reps'] != repeats:
+            self.logger.warning(u"setCommandRepeatAction: setting repeat value failed")
+                    
+        
     ########################################
     # Plugin Menu object callbacks
     ########################################
 
-    def setCommandRepeatMenu(self, valuesDict, typeId):
-        self.logger.debug(u"setCommandRepeatMenu: typeId: {},  valuesDict: {}".format(typeId, valuesDict))
 
-        device  = valuesDict["device"]
-        command = valuesDict["command"]
-        try:
-            repeats = int(valuesDict["repeats"])
-        except:
-            return False
-
-        devID = self.bond_devices.get(device, None)
-        self.logger.threaddebug("setCommandRepeatMenu: Indigo device id: {}".format(devID))
-        if not devID:
-            self.logger.threaddebug("setCommandRepeatMenu: no Indigo device for {}".format(bondID))
-            return
-            
-        idev = indigo.devices.get(devID, None)
-        self.logger.threaddebug("{}: Device ID: {}".format(idev.name, idev.id))
-        if not idev:
-            self.logger.warning("setCommandRepeatMenu: No Indigo device for {}".format(devID))
-            return
-        
-        # now to find the action_id that goes with that command.  There's a glaring hole in the API
-        # in that the action list returned for the device is only names, not action_ids.
-
-        bridge = indigo.devices[int(idev.pluginProps["bridge"])]
-        command_list = bridge.get_device_command_list(device)
-        self.logger.threaddebug("setCommandRepeatMenu: command_list: {}".format(command_list))
-        for cmd in command_list:
-            if cmd == "_":
-                continue
-            cmd_info = bridge.get_device_command(cmd)
-            self.logger.threaddebug("setCommandRepeatMenu: cmd: {} command_info: {}".format(cmd, cmd_info))
-            if cmd_info['action'] == command:
-                self.logger.threaddebug("setCommandRepeatMenu: found it!")
-            
-        
-
-            
+    def dumpConfig(self):
+        self.logger.info("\n"+json.dumps(self.known_devices, sort_keys=True, indent=4, separators=(',', ': ')))
         return True
-        
-        bridge = indigo.devices[int(device.pluginProps["bridge"])]
-        
-        command_list = bridge.get_device_command_list(dev.address)
-        self.logger.debug(u"{}: get_device_command_list: {}".format(dev.name, command_list))
-        for cmd_id in command_list:
-            cmd_info = bridge.get_device_command(dev.address, cmd_id)
-            self.logger.debug(u"{}: get_device_command: {}".format(dev.name, cmd_info))
 
