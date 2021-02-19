@@ -124,23 +124,39 @@ class Plugin(indigo.PluginBase):
                         
         elif device.deviceTypeId == "bondDevice":
             self.bond_devices[device.address] = device.id
-            bondid = device.pluginProps['bridge']   
+            bondid = device.pluginProps['bridge']  
+            bridge = self.bond_bridges[bondid] 
             dev_info = self.known_devices[bondid].get(device.address, None)
+            bond_type = dev_info.get('type', 'UN')
             if dev_info and not device.pluginProps.get('bond_type', None):
                 self.logger.debug(u"{}: Updating Device info:\n{}".format(device.name, dev_info))
 
-                type = dev_info.get('type', 'UN')
                 name = dev_info.get('name', None)
                 if name:
                     device.name = "{} ({})".format(name, device.address)
-                device.subModel = bond_types[type]
+                device.subModel = bond_types[bond_type]
                 device.replaceOnServer()
 
                 newProps = device.pluginProps
-                newProps.update( {'bond_type' : type} )
+                newProps.update( {'bond_type' : bond_type} )
                 device.replacePluginPropsOnServer(newProps)
 
-                        
+            states = bridge.get_device_state(device.address)
+            if bond_type == 'GX':
+                isOn = bool(states['power'])
+                device.updateStateOnServer(key='onOffState', value=isOn)
+
+            elif bond_type == 'FP':
+                isOn = bool(states['power'])
+                device.updateStateOnServer(key='onOffState', value=isOn)
+
+                flame = states['flame']
+                self.logger.debug("{}: Flame = {}".format(device.name, flame))
+            
+            elif bond_type == 'MS':
+                isOpen = bool(states['open'])
+                device.updateStateOnServer(key='onOffState', value=isOpen)
+                                   
         else:
             self.logger.error(u"{}: deviceStartComm: Unknown device type: {}".format(device.name, device.deviceTypeId))
 
@@ -372,6 +388,19 @@ class Plugin(indigo.PluginBase):
         bridge.device_action(pluginAction.props["device"], pluginAction.props["command"], payload)
 
                 
+    def updateStateBeliefAction(self, pluginAction):
+        self.logger.debug(u"updateStateBeliefAction, pluginAction = {}".format(pluginAction))
+        bridge = self.bond_bridges[pluginAction.props["bridge"]]
+        state = pluginAction.props["state"]
+        value = pluginAction.props["value"]   
+            
+        if len(state) and len(value):
+            payload = {state : value}
+        else:
+            return
+            
+        bridge.update_device_state(pluginAction.props["device"], pluginAction.props["command"], payload)
+
 
     def setCommandRepeatAction(self, pluginAction):
         self.logger.debug(u"setCommandRepeatAction: pluginAction: {}".format(pluginAction))

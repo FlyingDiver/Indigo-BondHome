@@ -162,6 +162,26 @@ class BondHome(object):
             raise
         return resp.json()
                                 
+    def get_device_state(self, device_id):
+        
+        url = "http://{}/v2/devices/{}/state".format(self.address, device_id)
+        try:
+            resp = requests.get(url, headers=self.token_header)
+            resp.raise_for_status()
+        except:
+            raise
+        return resp.json()
+                                
+    def update_device_state(self, device_id, payload):
+        
+        url = "http://{}/v2/devices/{}/state".format(self.address, device_id)
+        try:
+            resp = requests.patch(url, headers=self.token_header, json=payload)
+            resp.raise_for_status()
+        except:
+            raise
+        return resp.json()
+                                
     def get_device_command_list(self, device_id):
         
         url = "http://{}/v2/devices/{}/commands".format(self.address, device_id)

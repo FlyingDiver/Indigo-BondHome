@@ -55,4 +55,28 @@
             </Field>
         </ConfigUI>
 	</Action>
+	<Action id="updateStateBeliefAction">
+		<Name>Update Device State Belief</Name>
+		<CallbackMethod>updateStateBeliefAction</CallbackMethod>
+        <ConfigUI>
+            <Field id="bridge" type="menu">
+                <Label>Bridge:</Label>
+                <List class="self" method="get_bridge_list" dynamicReload="true"/>
+                <CallbackMethod>menuChanged</CallbackMethod>
+            </Field>
+            <Field id="device" type="menu">
+                <Label>Device:</Label>
+                <List class="self" method="get_device_list" dynamicReload="true"/>
+                <CallbackMethod>menuChanged</CallbackMethod>
+            </Field>
+            <Field id="state" type="menu">
+                <Label>State:</Label>
+                <List class="self" method="get_state_list" dynamicReload="true"/>
+                <CallbackMethod>menuChanged</CallbackMethod>
+            </Field>
+            <Field id="Value" type="textfield">
+                <Label>New Value:</Label>
+            </Field>
+        </ConfigUI>
+	</Action>
 </Actions>
