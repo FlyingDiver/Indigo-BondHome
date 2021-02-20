@@ -43,6 +43,15 @@ class Plugin(indigo.PluginBase):
         self.logger.info(u"Stopping BondHome")
         
         
+    def validatePrefsConfigUi(self, valuesDict):
+        self.logger.debug(u"validatePrefsConfigUi called")
+        errorDict = indigo.Dict()
+
+        if len(errorDict) > 0:
+            return (False, valuesDict, errorDict)
+
+        return True
+        
     def closedPrefsConfigUi(self, valuesDict, userCancelled):
         if not userCancelled:
             try:
@@ -78,9 +87,6 @@ class Plugin(indigo.PluginBase):
         
     def deviceStartComm(self, device):
         self.logger.info(u"{}: Starting {} Device {}".format(device.name, device.deviceTypeId, device.id))
-
-        device.stateListOrDisplayStateIdChanged()
-        self.logger.debug(u"{}: Is configured: {}".format(device.name, device.configured))
 
         if device.deviceTypeId == "bondBridge":
 
@@ -140,22 +146,20 @@ class Plugin(indigo.PluginBase):
                 newProps = device.pluginProps
                 newProps.update( {'bond_type' : bond_type} )
                 device.replacePluginPropsOnServer(newProps)
-
+                
             states = bridge.get_device_state(device.address)
+            self.logger.debug(u"{}: Device states: {}".format(device.name, states))
+            device.stateListOrDisplayStateIdChanged()
+            
             if bond_type == 'GX':
-                isOn = bool(states['power'])
-                device.updateStateOnServer(key='onOffState', value=isOn)
+                device.updateStateOnServer(key='onOffState', value=bool(states['power']))
 
             elif bond_type == 'FP':
-                isOn = bool(states['power'])
-                device.updateStateOnServer(key='onOffState', value=isOn)
-
-                flame = states['flame']
-                self.logger.debug("{}: Flame = {}".format(device.name, flame))
+                device.updateStateOnServer(key='onOffState', value=bool(states['power']))
+                device.updateStateOnServer(key='flame', value=states['flame'])
             
             elif bond_type == 'MS':
-                isOpen = bool(states['open'])
-                device.updateStateOnServer(key='onOffState', value=isOpen)
+                device.updateStateOnServer(key='onOffState', value=bool(states['open']))
                                    
         else:
             self.logger.error(u"{}: deviceStartComm: Unknown device type: {}".format(device.name, device.deviceTypeId))
@@ -174,6 +178,23 @@ class Plugin(indigo.PluginBase):
             
         else:
             self.logger.error(u"{}: deviceStopComm: Unknown device type: {}".format(device.name, device.deviceTypeId))
+
+
+    ########################################
+    #
+    # callback for state list changes, called from stateListOrDisplayStateIdChanged()
+    #
+    ########################################
+    
+    def getDeviceStateList(self, device):
+        state_list = indigo.PluginBase.getDeviceStateList(self, device)
+            
+        if device.pluginProps.get("bond_type", None) == "FP":
+            flame_state = self.getDeviceStateDictForNumberType(u"flame", u"Flame", u"Flame")
+            state_list.append(flame_state)
+
+        return state_list
+
 
     ########################################
     #
