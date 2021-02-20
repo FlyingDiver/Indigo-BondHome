@@ -188,7 +188,9 @@ class Plugin(indigo.PluginBase):
     
     def getDeviceStateList(self, device):
         state_list = indigo.PluginBase.getDeviceStateList(self, device)
-            
+        
+        # add custom states as needed for bond device type
+        
         if device.pluginProps.get("bond_type", None) == "FP":
             flame_state = self.getDeviceStateDictForNumberType(u"flame", u"Flame", u"Flame")
             state_list.append(flame_state)
@@ -233,19 +235,14 @@ class Plugin(indigo.PluginBase):
         bond_type = device.pluginProps['bond_type']
         self.logger.threaddebug("{}: bond_type: {}".format(device.name, bond_type))
         if bond_type == 'GX':
-            isOn = bool(data['b']['power'])
-            device.updateStateOnServer(key='onOffState', value=isOn)
+            device.updateStateOnServer(key='onOffState', value=bool(data['b']['power']))
 
         elif bond_type == 'FP':
-            isOn = bool(data['b']['power'])
-            device.updateStateOnServer(key='onOffState', value=isOn)
+            device.updateStateOnServer(key='onOffState', value=bool(data['b']['power']))
+            device.updateStateOnServer(key='flame', value=data['b']['flame'])
 
-            flame = data['b']['flame']
-            self.logger.debug("{}: Flame = {}".format(device.name, flame))
-            
         elif bond_type == 'MS':
-            isOpen = bool(data['b']['open'])
-            device.updateStateOnServer(key='onOffState', value=isOn)
+            device.updateStateOnServer(key='onOffState', value=bool(data['b']['open']))
        
     ########################################
     #
