@@ -311,6 +311,7 @@ class Plugin(indigo.PluginBase):
     # Relay Action callback
     ########################################
     def actionControlDevice(self, action, dev):
+        self.logger.threaddebug("{}: actionControlDevice:  action = {}".format(dev.name, action))
     
         if action.deviceAction == indigo.kDeviceAction.TurnOn:
 
@@ -320,7 +321,8 @@ class Plugin(indigo.PluginBase):
                 dev.updateStateOnServer(key='brightnessLevel', value=100)
 
             elif dev.deviceTypeId == "bondDevice":
-                self.sendDeviceAction(dev, dev.pluginProps["on_command"])
+                bridge = self.bond_bridges[dev.pluginProps["bridge"]]
+                bridge.device_action(dev.address, dev.pluginProps["on_command"])
 
 
         elif action.deviceAction == indigo.kDeviceAction.TurnOff:
@@ -331,7 +333,8 @@ class Plugin(indigo.PluginBase):
                 dev.updateStateOnServer(key='brightnessLevel', value=0)
 
             elif dev.deviceTypeId == "bondDevice":
-                self.sendDeviceAction(dev, dev.pluginProps["off_command"])
+                bridge = self.bond_bridges[dev.pluginProps["bridge"]]
+                bridge.device_action(dev.address, dev.pluginProps["off_command"])
 
 
         elif action.deviceAction == indigo.kDeviceAction.SetBrightness:
