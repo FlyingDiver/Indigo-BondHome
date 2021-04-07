@@ -483,7 +483,7 @@ class Plugin(indigo.PluginBase):
         self.logger.debug(u"updateStateBeliefAction, pluginAction = {}".format(pluginAction))
         bridge = self.bond_bridges[pluginAction.props["bridge"]]
         state = pluginAction.props["state"]
-        value = pluginAction.props["value"]   
+        value = indigo.activePlugin.substitute(pluginAction.props["value"])
             
         if len(state) and len(value):
             payload = {state : value}
@@ -494,13 +494,13 @@ class Plugin(indigo.PluginBase):
 
 
     def setCommandRepeatAction(self, pluginAction):
-        self.logger.debug(u"setCommandRepeatAction: pluginAction: {}".format(pluginAction))
+        self.logger.threaddebug(u"setCommandRepeatAction: pluginAction: {}".format(pluginAction))
 
         bridge = self.bond_bridges[pluginAction.props["bridge"]]
         device  = pluginAction.props["device"]
         command = pluginAction.props["command"]
         try:
-            repeats = int(pluginAction.props["repeats"])
+            repeats = int(indigo.activePlugin.substitute(pluginAction.props["repeats"]))
         except:
             self.logger.warning(u"setCommandRepeatAction: invalid repeat value: {}".format(pluginAction.props["repeats"]))
             return False
@@ -521,7 +521,8 @@ class Plugin(indigo.PluginBase):
         result = bridge.set_device_command_signal(device, cmd_id, payload)
         if result['reps'] != repeats:
             self.logger.warning(u"setCommandRepeatAction: setting repeat value failed")
-                    
+        else:                    
+            self.logger.debug(u"setCommandRepeatAction: repeat value = {}".format(result['reps']))
         
     ########################################
     # Plugin Menu object callbacks
