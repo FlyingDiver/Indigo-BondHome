@@ -60,39 +60,9 @@
             </State>
         </States>
      </Device>
-
-    <Device id="bondDevice" type="relay">
-        <Name>Bond Device</Name>
-        <ConfigUI>
-			<Field id="SupportsStatusRequest" type="checkbox" defaultValue="true" hidden="true" />
-			<Field id="bond_type" type="textfield" hidden="true" />
-
-            <Field id="bridge" type="menu">
-                <Label>Bridge:</Label>
-                <List class="self" method="get_bridge_list" dynamicReload="true"/>
-                <CallbackMethod>menuChanged</CallbackMethod>
-            </Field>
-            <Field id="address" type="menu">
-                <Label>Device:</Label>
-                <List class="self" method="get_device_list" dynamicReload="true"/>
-                <CallbackMethod>menuChanged</CallbackMethod>
-            </Field>
-             <Field id="on_command" type="menu">
-                <Label>On Command:</Label>
-                <List class="self" method="get_action_list" dynamicReload="true"/>
-                <CallbackMethod>menuChanged</CallbackMethod>
-            </Field>
-            <Field id="off_command" type="menu">
-                <Label>Off Command:</Label>
-                <List class="self" method="get_action_list" dynamicReload="true"/>
-                <CallbackMethod>menuChanged</CallbackMethod>
-            </Field>
-       </ConfigUI>
-        <States>
-        </States>
-    </Device>
-    <Device id="smartBond" type="relay">
-        <Name>Smart by Bond Device</Name>
+     
+    <Device id="smartBond" type="custom">
+        <Name>Smart by Bond Internal Bridge</Name>
         <ConfigUI>
             <Field id="address" type="textfield"  defaultValue="" tooltip="Enter IP address or Hostname of gateway.">
 				<Label>IP Address or Hostname:</Label>
@@ -100,16 +70,6 @@
 			<Field id="token" type="textfield" defaultValue="" tooltip="Local Token">
 				<Label>Local Token:</Label>
 			</Field>
-             <Field id="on_command" type="menu">
-                <Label>On Command:</Label>
-                <List class="self" method="get_action_list" dynamicReload="true"/>
-                <CallbackMethod>menuChanged</CallbackMethod>
-            </Field>
-            <Field id="off_command" type="menu">
-                <Label>Off Command:</Label>
-                <List class="self" method="get_action_list" dynamicReload="true"/>
-                <CallbackMethod>menuChanged</CallbackMethod>
-            </Field>
         </ConfigUI>
         <States>
             <State id="fw_ver" readonly="true">
@@ -144,4 +104,35 @@
             </State>
         </States>
      </Device>
+
+    <Device id="bondDevice" type="relay">
+        <Name>Bond Device</Name>
+        <ConfigUI>
+			<Field id="SupportsStatusRequest" type="checkbox" defaultValue="true" hidden="true" />
+			<Field id="bond_type" type="textfield" hidden="true" />
+
+            <Field id="bridge" type="menu">
+                <Label>Bridge:</Label>
+                <List class="self" method="get_bridge_list" dynamicReload="true"/>
+                <CallbackMethod>menuChanged</CallbackMethod>
+            </Field>
+            <Field id="address" type="menu">
+                <Label>Device:</Label>
+                <List class="self" method="get_device_list" dynamicReload="true"/>
+                <CallbackMethod>menuChanged</CallbackMethod>
+            </Field>
+             <Field id="on_command" type="menu">
+                <Label>On Command:</Label>
+                <List class="self" method="get_action_list" dynamicReload="true"/>
+                <CallbackMethod>menuChanged</CallbackMethod>
+            </Field>
+            <Field id="off_command" type="menu">
+                <Label>Off Command:</Label>
+                <List class="self" method="get_action_list" dynamicReload="true"/>
+                <CallbackMethod>menuChanged</CallbackMethod>
+            </Field>
+       </ConfigUI>
+        <States>
+        </States>
+    </Device>
 </Devices>
