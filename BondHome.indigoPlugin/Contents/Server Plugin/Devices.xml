@@ -91,57 +91,5 @@
         <States>
         </States>
     </Device>
-    <Device id="smartBond" type="relay">
-        <Name>Smart by Bond Device</Name>
-        <ConfigUI>
-            <Field id="address" type="textfield"  defaultValue="" tooltip="Enter IP address or Hostname of gateway.">
-				<Label>IP Address or Hostname:</Label>
-			</Field>
-			<Field id="token" type="textfield" defaultValue="" tooltip="Local Token">
-				<Label>Local Token:</Label>
-			</Field>
-             <Field id="on_command" type="menu">
-                <Label>On Command:</Label>
-                <List class="self" method="get_action_list" dynamicReload="true"/>
-                <CallbackMethod>menuChanged</CallbackMethod>
-            </Field>
-            <Field id="off_command" type="menu">
-                <Label>Off Command:</Label>
-                <List class="self" method="get_action_list" dynamicReload="true"/>
-                <CallbackMethod>menuChanged</CallbackMethod>
-            </Field>
-        </ConfigUI>
-        <States>
-            <State id="fw_ver" readonly="true">
-                <ValueType >String</ValueType>
-                <TriggerLabel>Firmware Version</TriggerLabel>
-                <ControlPageLabel>Firmware Version</ControlPageLabel>
-            </State>
-            <State id="fw_date" readonly="true">
-                <ValueType >String</ValueType>
-                <TriggerLabel>Firmware Date</TriggerLabel>
-                <ControlPageLabel>Firmware Date</ControlPageLabel>
-            </State>
-            <State id="uptime_s" readonly="true">
-                <ValueType >String</ValueType>
-                <TriggerLabel>Uptime</TriggerLabel>
-                <ControlPageLabel>Uptime</ControlPageLabel>
-            </State>
-            <State id="make" readonly="true">
-                <ValueType >String</ValueType>
-                <TriggerLabel>Make</TriggerLabel>
-                <ControlPageLabel>Make</ControlPageLabel>
-            </State>
-            <State id="model" readonly="true">
-                <ValueType >String</ValueType>
-                <TriggerLabel>Model</TriggerLabel>
-                <ControlPageLabel>Model</ControlPageLabel>
-            </State>
-            <State id="bondid" readonly="true">
-                <ValueType >String</ValueType>
-                <TriggerLabel>Bond ID</TriggerLabel>
-                <ControlPageLabel>Bond ID</ControlPageLabel>
-            </State>
-        </States>
-     </Device>
+
 </Devices>
