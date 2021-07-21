@@ -108,22 +108,18 @@ class BondHome(object):
         try:
             resp = requests.get(url, headers=self.token_header)
             resp.raise_for_status()
-        except Exception as err:
-            self.logger.debug(u"get_bridge_version, err = {}".format(err))
-            return None
-        else:
-            return resp.json()
+        except:
+            raise
+        return resp.json()
 
     def get_bridge_info(self):            
         url = "http://{}/v2/bridge".format(self.address)
         try:
             resp = requests.get(url, headers=self.token_header)
             resp.raise_for_status()
-        except Exception as err:
-            self.logger.debug(u"get_bridge_info, err = {}".format(err))
-            return None
-        else:
-            return resp.json()
+        except:
+            raise            
+        return resp.json()
 
     def set_bridge_info(self, data):
         url = "http://{}/v2/bridge".format(self.address)
@@ -131,8 +127,7 @@ class BondHome(object):
             resp = requests.patch(url, headers=self.token_header, json=data)
             resp.raise_for_status()
         except:
-            self.logger.debug(u"set_bridge_info, err = {}".format(err))
-            return None
+            raise
         return resp.json()
         
     def get_device_list(self):            
