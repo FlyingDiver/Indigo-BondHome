@@ -53,6 +53,9 @@
             <Field id="repeats" type="textfield">
                 <Label>Repeats:</Label>
             </Field>
+			<Field id="argumentNote1" type="label" fontSize="small" fontColor="darkgray">
+				<Label>Variable and Device State Substitution is enabled for this field. Use the format %%v:12345%% for variables and %%d:12345:someStateId%% for device states.</Label>
+			</Field>
         </ConfigUI>
 	</Action>
 	<Action id="updateStateBeliefAction">
@@ -77,6 +80,9 @@
             <Field id="Value" type="textfield">
                 <Label>New Value:</Label>
             </Field>
+			<Field id="argumentNote1" type="label" fontSize="small" fontColor="darkgray">
+				<Label>Variable and Device State Substitution is enabled for this field. Use the format %%v:12345%% for variables and %%d:12345:someStateId%% for device states.</Label>
+			</Field>
         </ConfigUI>
 	</Action>
 </Actions>

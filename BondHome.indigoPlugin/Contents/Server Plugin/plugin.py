@@ -79,7 +79,7 @@ class Plugin(indigo.PluginBase):
         errorMsgDict = indigo.Dict()
 
         # Pre-load the first bridge for any non-bridge device, if not already specified
-        if typeId != 'bondBridge' and not valuesDict.get('bridge', None) and len(self.bond_bridges):
+        if typeId == 'bondDevice' and not valuesDict.get('bridge', None) and len(self.bond_bridges):
             valuesDict['bridge'] = self.bond_bridges.keys()[0]
             
         return (valuesDict, errorMsgDict)
@@ -95,41 +95,98 @@ class Plugin(indigo.PluginBase):
             except Exception as err:
                 self.logger.debug(u"{}: BondHome __init__ error: {}".format(device.name,  err))
                 device.updateStateImageOnServer(indigo.kStateImageSel.SensorTripped)
-            else:
+                return
+                
+            try:
                 version = bridge.get_bridge_version()
-                self.logger.debug(u"{}: BondHome version: {}".format(device.name,  version))
+            except:
+                self.logger.debug(u"{}: Error in get_bridge_version()".format(device.name))
+                return
+            self.logger.debug(u"{}: Bond version: {}".format(device.name,  version))
 
+            try:
                 info = bridge.get_bridge_info()
-                self.logger.debug(u"{}: BondHome info: {}".format(device.name,  info))
+            except:
+                self.logger.debug(u"{}: Error in get_bridge_info()".format(device.name))
+                return
+            self.logger.debug(u"{}: Bond info: {}".format(device.name,  info))
+                
+            stateList = [
+                { 'key':'fw_ver',           'value':version['fw_ver']},
+                { 'key':'fw_date',          'value':version['fw_date']},
+                { 'key':'uptime_s',         'value':version['uptime_s']},
+                { 'key':'make',             'value':version['make']},
+                { 'key':'model',            'value':version['model']},
+                { 'key':'bondid',           'value':version['bondid']},
+                { 'key':'name',             'value':info['name']},
+                { 'key':'location',         'value':info['location']},
+                { 'key':'brightnessLevel',  'value':info['bluelight']}
+            ]
+            device.updateStatesOnServer(stateList)
 
-                stateList = [
-                    { 'key':'fw_ver',           'value':version['fw_ver']},
-                    { 'key':'fw_date',          'value':version['fw_date']},
-                    { 'key':'uptime_s',         'value':version['uptime_s']},
-                    { 'key':'make',             'value':version['make']},
-                    { 'key':'model',            'value':version['model']},
-                    { 'key':'bondid',           'value':version['bondid']},
-                    { 'key':'name',             'value':info['name']},
-                    { 'key':'location',         'value':info['location']},
-                    { 'key':'brightnessLevel',  'value':info['bluelight']},
-               ]
-                device.updateStatesOnServer(stateList)
+            bondID = version['bondid']
+            self.bond_bridges[bondID] = bridge
 
-                bondID = version['bondid']
-                self.bond_bridges[bondID] = bridge
-
-                # get all the devices the bridge knows about
-                self.known_devices[bondID] = {}
-                for bdev in bridge.get_device_list():
-                    self.known_devices[bondID][bdev] = bridge.get_device(bdev)
-                self.logger.debug(u"{}: known_devices:\n{}".format(device.name, self.known_devices))
-            
-                # start up the BPUP socket connection
-                bridge.udp_start(self.receiveBPUP)
+            # get all the devices the bridge knows about
+            self.known_devices[bondID] = {}
+            for bdev in bridge.get_device_list():
+                self.known_devices[bondID][bdev] = bridge.get_device(bdev)
+            self.logger.debug(u"{}: known_devices:\n{}".format(device.name, self.known_devices))
+        
+            # start up the BPUP socket connection
+            bridge.udp_start(self.receiveBPUP)
         
                         
+        elif device.deviceTypeId == "smartBond":
+
+            try:
+                bridge = BondHome(device.pluginProps['address'], device.pluginProps[u'token'])
+            except Exception as err:
+                self.logger.debug(u"{}: BondHome __init__ error: {}".format(device.name,  err))
+                device.updateStateImageOnServer(indigo.kStateImageSel.SensorTripped)
+                return
+                
+            version = bridge.get_bridge_version()            
+            self.logger.debug(u"{}: BondHome version: {}".format(device.name,  version))
+            stateList = [
+                { 'key':'fw_ver',           'value':version['fw_ver']},
+                { 'key':'fw_date',          'value':version['fw_date']},
+                { 'key':'uptime_s',         'value':version['uptime_s']},
+                { 'key':'make',             'value':version['make']},
+                { 'key':'model',            'value':version['model']},
+                { 'key':'bondid',           'value':version['bondid']}
+            ]
+            device.updateStatesOnServer(stateList)
+
+            bondID = version['bondid']
+            self.bond_bridges[bondID] = bridge
+
+            # get all the devices the bridge knows about (usually only one, but it's possible that might change)
+            self.known_devices[bondID] = {}
+            for bdev in bridge.get_device_list():
+                self.known_devices[bondID][bdev] = bridge.get_device(bdev)
+            self.logger.debug(u"{}: known_devices:\n{}".format(device.name, self.known_devices))
+                        
+            # start up the BPUP socket connection
+            bridge.udp_start(self.receiveBPUP)
+
         elif device.deviceTypeId == "bondDevice":
+        
+            # save the device info, do startup later after bridges are started
+            
             self.bond_devices[device.address] = device.id
+                                 
+        else:
+            self.logger.error(u"{}: deviceStartComm: Unknown device type: {}".format(device.name, device.deviceTypeId))
+
+
+    def doDeviceStartup(self):
+    
+        for bondDevID in self.bond_devices.values():
+            
+            device = indigo.devices[bondDevID]
+            self.logger.debug(u"{}: doDeviceStartup: {}".format(device.name, device.deviceTypeId))
+        
             bondid = device.pluginProps['bridge']  
             bridge = self.bond_bridges[bondid] 
             dev_info = self.known_devices[bondid].get(device.address, None)
@@ -160,9 +217,8 @@ class Plugin(indigo.PluginBase):
             
             elif bond_type == 'MS':
                 device.updateStateOnServer(key='onOffState', value=bool(states['open']))
-                                   
-        else:
-            self.logger.error(u"{}: deviceStartComm: Unknown device type: {}".format(device.name, device.deviceTypeId))
+
+
 
             
     def deviceStopComm(self, device):
@@ -172,12 +228,27 @@ class Plugin(indigo.PluginBase):
             bondID = device.states['bondid']
             del self.bond_bridges[bondID]
 
+        elif device.deviceTypeId == "smartBond":
+            bondID = device.states['bondid']
+            del self.bond_bridges[bondID]
+
         elif device.deviceTypeId == "bondDevice":
             self.logger.debug(u"{}: Skipping {} device".format(device.name,  device.deviceTypeId))
             pass
             
         else:
             self.logger.error(u"{}: deviceStopComm: Unknown device type: {}".format(device.name, device.deviceTypeId))
+
+    # only here to finish device startup...
+    def runConcurrentThread(self):
+        self.doDeviceStartup()
+        
+        try:
+            while True:                        
+                self.sleep(60.0)
+        except self.StopThread:
+            pass
+
 
 
     ########################################
@@ -312,7 +383,7 @@ class Plugin(indigo.PluginBase):
     ########################################
     def actionControlDevice(self, action, dev):
         self.logger.threaddebug("{}: actionControlDevice:  action = {}".format(dev.name, action))
-    
+        
         if action.deviceAction == indigo.kDeviceAction.TurnOn:
 
             if dev.deviceTypeId == "bondBridge":
@@ -320,7 +391,7 @@ class Plugin(indigo.PluginBase):
                 self.bond_bridges[bondID].set_bridge_info({"bluelight": 255})
                 dev.updateStateOnServer(key='brightnessLevel', value=100)
 
-            elif dev.deviceTypeId == "bondDevice":
+            elif dev.deviceTypeId in ["bondDevice", "smartBond"]:
                 bridge = self.bond_bridges[dev.pluginProps["bridge"]]
                 bridge.device_action(dev.address, dev.pluginProps["on_command"])
 
@@ -413,7 +484,7 @@ class Plugin(indigo.PluginBase):
         self.logger.debug(u"updateStateBeliefAction, pluginAction = {}".format(pluginAction))
         bridge = self.bond_bridges[pluginAction.props["bridge"]]
         state = pluginAction.props["state"]
-        value = pluginAction.props["value"]   
+        value = indigo.activePlugin.substitute(pluginAction.props["value"])
             
         if len(state) and len(value):
             payload = {state : value}
@@ -424,13 +495,13 @@ class Plugin(indigo.PluginBase):
 
 
     def setCommandRepeatAction(self, pluginAction):
-        self.logger.debug(u"setCommandRepeatAction: pluginAction: {}".format(pluginAction))
+        self.logger.threaddebug(u"setCommandRepeatAction: pluginAction: {}".format(pluginAction))
 
         bridge = self.bond_bridges[pluginAction.props["bridge"]]
         device  = pluginAction.props["device"]
         command = pluginAction.props["command"]
         try:
-            repeats = int(pluginAction.props["repeats"])
+            repeats = int(indigo.activePlugin.substitute(pluginAction.props["repeats"]))
         except:
             self.logger.warning(u"setCommandRepeatAction: invalid repeat value: {}".format(pluginAction.props["repeats"]))
             return False
@@ -451,7 +522,8 @@ class Plugin(indigo.PluginBase):
         result = bridge.set_device_command_signal(device, cmd_id, payload)
         if result['reps'] != repeats:
             self.logger.warning(u"setCommandRepeatAction: setting repeat value failed")
-                    
+        else:                    
+            self.logger.debug(u"setCommandRepeatAction: repeat value = {}".format(result['reps']))
         
     ########################################
     # Plugin Menu object callbacks

@@ -9,7 +9,7 @@ import socket
 import time
 from threading import Thread
 
-TIMEOUT = 60.0
+PING_TIMEOUT = 60.0
           
 ################################################################################
 
@@ -43,7 +43,7 @@ class BondHome(object):
         if not self.sock:
             try:
                 self.sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-                self.sock.settimeout(TIMEOUT)
+                self.sock.settimeout(PING_TIMEOUT)
             except:
                 raise
             else:
@@ -61,7 +61,7 @@ class BondHome(object):
             now = time.time()
             if now > self.next_ping:
                 self.sock.sendto('\n', (self.address, 30007))
-                self.next_ping = now + TIMEOUT
+                self.next_ping = now + PING_TIMEOUT
                 
             try:
                 json_data, addr = self.sock.recvfrom(2048)
@@ -103,9 +103,7 @@ class BondHome(object):
         return resp
 
 
-    def get_bridge_version(self):
-        self.logger.debug(u"get_bridge_version()")
-            
+    def get_bridge_version(self):            
         url = "http://{}/v2/sys/version".format(self.address)
         try:
             resp = requests.get(url, headers=self.token_header)
@@ -114,9 +112,7 @@ class BondHome(object):
             raise
         return resp.json()
 
-    def get_bridge_info(self):
-        self.logger.debug(u"get_bridge_info()")
-            
+    def get_bridge_info(self):            
         url = "http://{}/v2/bridge".format(self.address)
         try:
             resp = requests.get(url, headers=self.token_header)
@@ -126,7 +122,6 @@ class BondHome(object):
         return resp.json()
 
     def set_bridge_info(self, data):
-        
         url = "http://{}/v2/bridge".format(self.address)
         try:
             resp = requests.patch(url, headers=self.token_header, json=data)
@@ -135,9 +130,7 @@ class BondHome(object):
             raise
         return resp.json()
         
-    def get_device_list(self):
-        self.logger.debug(u"get_device_list()")
-            
+    def get_device_list(self):            
         url = "http://{}/v2/devices".format(self.address)
         try:
             resp = requests.get(url, headers=self.token_header)
@@ -153,7 +146,6 @@ class BondHome(object):
         return retList
 
     def get_device(self, device_id):
-        
         url = "http://{}/v2/devices/{}".format(self.address, device_id)
         try:
             resp = requests.get(url, headers=self.token_header)
@@ -163,7 +155,6 @@ class BondHome(object):
         return resp.json()
                                 
     def get_device_state(self, device_id):
-        
         url = "http://{}/v2/devices/{}/state".format(self.address, device_id)
         try:
             resp = requests.get(url, headers=self.token_header)
@@ -173,7 +164,6 @@ class BondHome(object):
         return resp.json()
                                 
     def update_device_state(self, device_id, payload):
-        
         url = "http://{}/v2/devices/{}/state".format(self.address, device_id)
         try:
             resp = requests.patch(url, headers=self.token_header, json=payload)
@@ -183,7 +173,6 @@ class BondHome(object):
         return resp.json()
                                 
     def get_device_command_list(self, device_id):
-        
         url = "http://{}/v2/devices/{}/commands".format(self.address, device_id)
         try:
             resp = requests.get(url, headers=self.token_header)
@@ -193,7 +182,6 @@ class BondHome(object):
         return resp.json()
                                     
     def get_device_command(self, device_id, command_id):
-        
         url = "http://{}/v2/devices/{}/commands/{}".format(self.address, device_id, command_id)
         try:
             resp = requests.get(url, headers=self.token_header)
@@ -203,7 +191,6 @@ class BondHome(object):
         return resp.json()
                                 
     def set_device_command_signal(self, device_id, command_id, payload):
-        
         url = "http://{}/v2/devices/{}/commands/{}/signal".format(self.address, device_id, command_id)
         try:
             resp = requests.patch(url, headers=self.token_header, json=payload)
