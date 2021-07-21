@@ -9,7 +9,7 @@ import socket
 import time
 from threading import Thread
 
-TIMEOUT = 60.0
+PING_TIMEOUT = 60.0
           
 ################################################################################
 
@@ -43,7 +43,7 @@ class BondHome(object):
         if not self.sock:
             try:
                 self.sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-                self.sock.settimeout(TIMEOUT)
+                self.sock.settimeout(PING_TIMEOUT)
             except:
                 raise
             else:
@@ -61,7 +61,7 @@ class BondHome(object):
             now = time.time()
             if now > self.next_ping:
                 self.sock.sendto('\n', (self.address, 30007))
-                self.next_ping = now + TIMEOUT
+                self.next_ping = now + PING_TIMEOUT
                 
             try:
                 json_data, addr = self.sock.recvfrom(2048)
