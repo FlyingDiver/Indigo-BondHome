@@ -239,18 +239,11 @@ class Plugin(indigo.PluginBase):
         else:
             self.logger.error(u"{}: deviceStopComm: Unknown device type: {}".format(device.name, device.deviceTypeId))
 
-    # only here to finish device startup...
-    def runConcurrentThread(self):
+    # Undocumented API - runs after all devices have been started.  Actually, it's the super._postStartup() call that starts the devices.
+    def _postStartup(self):
+        super(Plugin, self)._postStartup()
         self.doDeviceStartup()
-        
-        try:
-            while True:                        
-                self.sleep(60.0)
-        except self.StopThread:
-            pass
-
-
-
+ 
     ########################################
     #
     # callback for state list changes, called from stateListOrDisplayStateIdChanged()
