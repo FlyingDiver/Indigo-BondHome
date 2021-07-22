@@ -88,6 +88,9 @@ class Plugin(indigo.PluginBase):
     def deviceStartComm(self, device):
         self.logger.info(u"{}: Starting {} Device {}".format(device.name, device.deviceTypeId, device.id))
 
+        # ensure device definition is up to date
+        device.stateListOrDisplayStateIdChanged()
+
         if device.deviceTypeId == "bondBridge":
 
             try:
@@ -185,9 +188,12 @@ class Plugin(indigo.PluginBase):
         for bondDevID in self.bond_devices.values():
             
             device = indigo.devices[bondDevID]
-            self.logger.debug(u"{}: doDeviceStartup: {}".format(device.name, device.deviceTypeId))
+            self.logger.debug(u"{}: doDeviceStartup: {} ({})".format(device.name, device.deviceTypeId, device.address))
         
-            bondid = device.pluginProps['bridge']  
+            bondid = device.pluginProps['bridge']
+            if bondid not in self.bond_bridges:
+                return
+                 
             bridge = self.bond_bridges[bondid] 
             dev_info = self.known_devices[bondid].get(device.address, None)
             bond_type = dev_info.get('type', 'UN')
@@ -218,8 +224,6 @@ class Plugin(indigo.PluginBase):
             elif bond_type == 'MS':
                 device.updateStateOnServer(key='onOffState', value=bool(states['open']))
 
-
-
             
     def deviceStopComm(self, device):
         self.logger.info(u"{}: Stopping {} Device {}".format(device.name, device.deviceTypeId, device.id))
@@ -233,8 +237,7 @@ class Plugin(indigo.PluginBase):
             del self.bond_bridges[bondID]
 
         elif device.deviceTypeId == "bondDevice":
-            self.logger.debug(u"{}: Skipping {} device".format(device.name,  device.deviceTypeId))
-            pass
+            del self.bond_devices[device.address]
             
         else:
             self.logger.error(u"{}: deviceStopComm: Unknown device type: {}".format(device.name, device.deviceTypeId))
