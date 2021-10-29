@@ -202,7 +202,7 @@ class Plugin(indigo.PluginBase):
 
                 name = dev_info.get('name', None)
                 if name:
-                    device.name = "{} ({})".format(name, device.address)
+                    device.name = u"{} ({})".format(name, device.address)
                 device.subModel = bond_types[bond_type]
                 device.replaceOnServer()
 
