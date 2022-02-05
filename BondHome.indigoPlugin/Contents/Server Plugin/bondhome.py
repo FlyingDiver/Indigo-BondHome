@@ -10,9 +10,9 @@ import time
 from threading import Thread
 
 PING_TIMEOUT = 60.0
-          
-################################################################################
 
+
+################################################################################
 class BondHome(object):
 
     def __init__(self, address, token):
@@ -20,19 +20,19 @@ class BondHome(object):
 
         self.address = address
         self.token_header = {'BOND-Token': token}
-        self.bridge_data =  {}
-         
+        self.bridge_data = {}
         self.udp_port = None
         self.sock = None
         self.callback = None
-        
-        self.logger.debug(u"BondHome __init__ address = {}, token = {}".format(address, token))
-                    
+        self.receive_thread = Thread(target=self.udp_receive)
+        self.receive_thread.daemon = True
+        self.next_ping = time.time()
+        self.logger.debug(f"BondHome __init__ address = {address}, token = {token}")
+
     def __del__(self):
         device = indigo.devices[self.deviceID]
         self.sock.close()
         self.stopFlag.set()
-
 
     ########################################
     # Bond Push UDP Protocol (BPUP)
@@ -44,27 +44,23 @@ class BondHome(object):
             try:
                 self.sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
                 self.sock.settimeout(PING_TIMEOUT)
-            except:
+            except (Exception,):
                 raise
             else:
                 self.logger.debug(u"udp_start() socket listener started")
 
-        # start up the receiver thread        
-        self.receive_thread = Thread(target=self.udp_receive)
-        self.receive_thread.daemon = True
+        # start up the receiver thread
         self.receive_thread.start()
-        
+
     def udp_receive(self):
-        self.next_ping = time.time()
-    
-        while True: 
+        while True:
             now = time.time()
             if now > self.next_ping:
                 self.sock.sendto('\n', (self.address, 30007))
                 self.next_ping = now + PING_TIMEOUT
-                
+
             try:
-                json_data, addr = self.sock.recvfrom(2048)
+                json_data, address = self.sock.recvfrom(2048)
             except socket.timeout as err:
                 continue
             except socket.error as err:
@@ -75,10 +71,10 @@ class BondHome(object):
                 except Exception as err:
                     raise
 
-                # don't send ping acks
+                # don't send ping ack
                 if len(data) == 1:
                     continue
-                    
+
                 # fix up the data
 
                 topic = data['t'].split('/')
@@ -86,116 +82,115 @@ class BondHome(object):
 
                 self.callback(data)
 
-
     ########################################
     # Commands to the Bridge
     ########################################
-    
-    def device_action(self, device_id, action, payload={}):
-        url = "http://{}/v2/devices/{}/actions/{}".format(self.address, device_id, action)
-        self.logger.debug(u"device_action, url = {}, payload = {}".format(url, payload))
+
+    def device_action(self, device_id, action, payload=None):
+        if not payload:
+            payload = {}
+        url = f"http://{self.address}/v2/devices/{device_id}/actions/{action}"
+        self.logger.debug(f"device_action, url = {url}, payload = {payload}")
         try:
             resp = requests.put(url, headers=self.token_header, json=payload)
             resp.raise_for_status()
-        except:
+        except (Exception,):
             raise
-        self.logger.debug(u"device_action, resp = {}".format(resp))
+        self.logger.debug(f"device_action, resp = {resp}")
         return resp
 
-
-    def get_bridge_version(self):            
-        url = "http://{}/v2/sys/version".format(self.address)
+    def get_bridge_version(self):
+        url = f"http://{self.address}/v2/sys/version"
         try:
             resp = requests.get(url, headers=self.token_header)
             resp.raise_for_status()
-        except:
+        except (Exception,):
             raise
         return resp.json()
 
-    def get_bridge_info(self):            
-        url = "http://{}/v2/bridge".format(self.address)
+    def get_bridge_info(self):
+        url = f"http://{self.address}/v2/bridge"
         try:
             resp = requests.get(url, headers=self.token_header)
             resp.raise_for_status()
-        except:
-            raise            
+        except (Exception,):
+            raise
         return resp.json()
 
     def set_bridge_info(self, data):
-        url = "http://{}/v2/bridge".format(self.address)
+        url = f"http://{self.address}/v2/bridge"
         try:
             resp = requests.patch(url, headers=self.token_header, json=data)
             resp.raise_for_status()
-        except:
+        except (Exception,):
             raise
         return resp.json()
-        
-    def get_device_list(self):            
-        url = "http://{}/v2/devices".format(self.address)
+
+    def get_device_list(self):
+        url = f"http://{self.address}/v2/devices"
         try:
             resp = requests.get(url, headers=self.token_header)
             resp.raise_for_status()
-        except:
+        except (Exception,):
             raise
-        self.logger.debug(u"get_device_list: {}".format(resp.json()))
+        self.logger.debug(f"get_device_list: {resp.json()}")
 
         retList = []
-        for key in resp.json():    
-            if key != "_": 
-                retList.append(key)   
+        for key in resp.json():
+            if key != "_":
+                retList.append(key)
         return retList
 
     def get_device(self, device_id):
-        url = "http://{}/v2/devices/{}".format(self.address, device_id)
+        url = f"http://{self.address}/v2/devices/{device_id}"
         try:
             resp = requests.get(url, headers=self.token_header)
             resp.raise_for_status()
-        except:
+        except (Exception,):
             raise
         return resp.json()
-                                
+
     def get_device_state(self, device_id):
-        url = "http://{}/v2/devices/{}/state".format(self.address, device_id)
+        url = f"http://{self.address}/v2/devices/{device_id}/state"
         try:
             resp = requests.get(url, headers=self.token_header)
             resp.raise_for_status()
-        except:
+        except (Exception,):
             raise
         return resp.json()
-                                
+
     def update_device_state(self, device_id, payload):
-        url = "http://{}/v2/devices/{}/state".format(self.address, device_id)
+        url = f"http://{self.address}/v2/devices/{device_id}/state"
         try:
             resp = requests.patch(url, headers=self.token_header, json=payload)
             resp.raise_for_status()
-        except:
+        except (Exception,):
             raise
         return resp.json()
-                                
+
     def get_device_command_list(self, device_id):
-        url = "http://{}/v2/devices/{}/commands".format(self.address, device_id)
+        url = f"http://{self.address}/v2/devices/{device_id}/commands"
         try:
             resp = requests.get(url, headers=self.token_header)
             resp.raise_for_status()
-        except:
+        except (Exception,):
             raise
         return resp.json()
-                                    
+
     def get_device_command(self, device_id, command_id):
         url = "http://{}/v2/devices/{}/commands/{}".format(self.address, device_id, command_id)
         try:
             resp = requests.get(url, headers=self.token_header)
             resp.raise_for_status()
-        except:
+        except (Exception,):
             raise
         return resp.json()
-                                
+
     def set_device_command_signal(self, device_id, command_id, payload):
         url = "http://{}/v2/devices/{}/commands/{}/signal".format(self.address, device_id, command_id)
         try:
             resp = requests.patch(url, headers=self.token_header, json=payload)
             resp.raise_for_status()
-        except:
+        except (Exception,):
             raise
         return resp.json()
-                                
