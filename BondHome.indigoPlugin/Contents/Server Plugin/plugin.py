@@ -188,13 +188,14 @@ class Plugin(indigo.PluginBase):
                 self.logger.debug(f"{device.name}: doDeviceStartup: no device info for {device.address}")
                 return
 
+            bond_type = dev_info.get('type', 'UN')
+
             if dev_info and not device.pluginProps.get('bond_type', None):
                 self.logger.debug(f"{device.name}: Updating Device info:\n{dev_info}")
 
                 name = dev_info.get('name', None)
                 if name:
                     device.name = f"{name} ({device.address})"
-                bond_type = dev_info.get('type', 'UN')
                 device.subModel = bond_types[bond_type]
                 device.replaceOnServer()
 
