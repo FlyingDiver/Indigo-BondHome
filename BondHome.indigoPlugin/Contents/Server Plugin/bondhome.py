@@ -56,7 +56,7 @@ class BondHome(object):
         while True:
             now = time.time()
             if now > self.next_ping:
-                self.sock.sendto('\n', (self.address, 30007))
+                self.sock.sendto('\n'.encode("utf-8"), (self.address, 30007))
                 self.next_ping = now + PING_TIMEOUT
 
             try:
