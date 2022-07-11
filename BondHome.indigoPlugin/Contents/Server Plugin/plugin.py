@@ -7,6 +7,7 @@ import logging
 import requests
 import json
 from bondhome import BondHome
+from zeroconf import IPVersion, ServiceBrowser, ServiceStateChange, Zeroconf, ZeroconfServiceTypes
 
 bond_types = {
     'CF': "Ceiling Fan",
@@ -28,15 +29,38 @@ class Plugin(indigo.PluginBase):
         self.indigo_log_handler.setLevel(self.logLevel)
         self.logger.debug(f"logLevel = {self.logLevel}")
 
+        self.found_bondbridges = {}    # zeroconf discovered devices
+        self.found_smartbridges = {}    # zeroconf discovered devices
+
         self.bond_bridges = {}  # dict of bridge devices, keyed by BondID, value id BondHome object
         self.bond_devices = {}  # dict of "client" devices, keyed by (bond) device_ID, value is Indigo device.id
         self.known_devices = {}  # nested dict of client devices, keyed by BondID then device_ID, value is dict returned by get_device()
 
     def startup(self):
         self.logger.info("Starting BondHome")
+        zeroconf = Zeroconf(ip_version=IPVersion.V4Only)
+        services = ["_bond._tcp.local."]
+        browser = ServiceBrowser(zeroconf, services, handlers=[self.on_service_state_change])
 
     def shutdown(self):
         self.logger.info("Stopping BondHome")
+
+    def on_service_state_change(self, zeroconf: Zeroconf, service_type: str, name: str, state_change: ServiceStateChange) -> None:
+        self.logger.debug(f"Service {name} of type {service_type} state changed: {state_change}")
+
+        if state_change in [ServiceStateChange.Added, ServiceStateChange.Updated]:
+            info = zeroconf.get_service_info(service_type, name)
+            if service_type == "_bond._tcp.local.":
+                if name not in self.found_bondbridges:
+                    self.found_bondbridges[name] = info.server
+
+        elif state_change is ServiceStateChange.Removed:
+            info = zeroconf.get_service_info(service_type, name)
+            if service_type == "_bond._tcp.local.":
+                if name in self.found_bondbridges:
+                    del self.found_bondbridges[name]
+
+        self.logger.debug(f"Found BondBridges: {self.found_bondbridges}")
 
     def closedPrefsConfigUi(self, valuesDict, userCancelled):
         if not userCancelled:
@@ -272,6 +296,21 @@ class Plugin(indigo.PluginBase):
     #
     ########################################
 
+    def found_device_list(self, filter=None, valuesDict=None, typeId=0, targetId=0):
+        self.logger.debug(f"found_device_list: filter = {filter}, typeId = {typeId}, targetId = {targetId}, valuesDict = {valuesDict}")
+        retList = [("Enter Manual IP address", "Discovered Devices:")]
+        if typeId == "bondBridge":
+            for name, address in self.found_bondbridges.items():
+                retList.append((address, name))
+        self.logger.debug(f"found_station_list: retList = {retList}")
+        return retList
+
+    def menuChanged(self, valuesDict, typeId, devId):
+        self.logger.debug(f"menuChanged: typeId = {typeId}, devId = {devId}, valuesDict = {valuesDict}")
+        if typeId == "bondBridge" or typeId == "smartBond":
+            valuesDict['address'] = valuesDict['found_list']
+        return valuesDict
+
     @staticmethod
     def get_bridge_list(filter="", valuesDict=None, typeId="", targetId=0):
         retList = []
@@ -312,11 +351,6 @@ class Plugin(indigo.PluginBase):
         for cmd in dev_info['actions']:
             retList.append((cmd, cmd))
         return retList
-
-    # doesn't do anything, just needed to force other menus to dynamically refresh
-    @staticmethod
-    def menuChanged(valuesDict=None, typeId=None, devId=None):
-        return valuesDict
 
     ########################################
     # Relay Action callback
@@ -428,8 +462,6 @@ class Plugin(indigo.PluginBase):
         cmd_id = None
         command_list = bridge.get_device_command_list(device)
         for cmd_id in command_list:
-            if cmd_id == "_":
-                continue
             cmd_info = bridge.get_device_command(device, cmd_id)
             if cmd_info['action'] == command:
                 break

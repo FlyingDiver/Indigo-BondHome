@@ -137,7 +137,7 @@ class BondHome(object):
 
         retList = []
         for key in resp.json():
-            if key != "_":
+            if not key.startswith("_"):     # skip internal keys
                 retList.append(key)
         return retList
 
@@ -175,7 +175,11 @@ class BondHome(object):
             resp.raise_for_status()
         except (Exception,):
             raise
-        return resp.json()
+        retList = []
+        for key in resp.json():
+            if not key.startswith("_"):     # skip internal keys
+                retList.append(key)
+        return retList
 
     def get_device_command(self, device_id, command_id):
         url = "http://{}/v2/devices/{}/commands/{}".format(self.address, device_id, command_id)

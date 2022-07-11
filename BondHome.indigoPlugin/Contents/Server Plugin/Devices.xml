@@ -5,8 +5,14 @@
     <Device id="bondBridge" type="dimmer">
         <Name>Bond Home Bridge</Name>
         <ConfigUI>
+            <Field id="found_list" type="menu" defaultValue="" >
+                <Label>Discovered Bond Bridges:</Label>
+                <List class="self" method="found_device_list" dynamicReload="true"/>
+                 <CallbackMethod>menuChanged</CallbackMethod>
+           </Field>
             <Field id="address" type="textfield"  defaultValue="" tooltip="Enter IP address or Hostname of gateway.">
 				<Label>IP Address or Hostname:</Label>
+                 <CallbackMethod>menuChanged</CallbackMethod>
 			</Field>
 			<Field id="token" type="textfield" defaultValue="" tooltip="Local Token">
 				<Label>Local Token:</Label>
@@ -64,6 +70,11 @@
     <Device id="smartBond" type="custom">
         <Name>Smart by Bond Internal Bridge</Name>
         <ConfigUI>
+            <Field id="found_list" type="menu" defaultValue="" >
+                <Label>Discovered WeatherLinks:</Label>
+                <List class="self" method="found_device_list" dynamicReload="true"/>
+                 <CallbackMethod>menuChanged</CallbackMethod>
+           </Field>
             <Field id="address" type="textfield"  defaultValue="" tooltip="Enter IP address or Hostname of gateway.">
 				<Label>IP Address or Hostname:</Label>
 			</Field>
