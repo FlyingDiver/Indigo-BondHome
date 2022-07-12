@@ -6,7 +6,7 @@
         <Name>Bond Home Bridge</Name>
         <ConfigUI>
             <Field id="found_list" type="menu" defaultValue="" >
-                <Label>Discovered Bond Bridges:</Label>
+                <Label>Discovered Bridges:</Label>
                 <List class="self" method="found_device_list" dynamicReload="true"/>
                  <CallbackMethod>menuChanged</CallbackMethod>
            </Field>
@@ -71,7 +71,7 @@
         <Name>Smart by Bond Internal Bridge</Name>
         <ConfigUI>
             <Field id="found_list" type="menu" defaultValue="" >
-                <Label>Discovered WeatherLinks:</Label>
+                <Label>Discovered Bridges:</Label>
                 <List class="self" method="found_device_list" dynamicReload="true"/>
                  <CallbackMethod>menuChanged</CallbackMethod>
            </Field>

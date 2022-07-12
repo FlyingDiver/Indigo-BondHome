@@ -7,7 +7,7 @@ import logging
 import requests
 import json
 from bondhome import BondHome
-from zeroconf import IPVersion, ServiceBrowser, ServiceStateChange, Zeroconf, ZeroconfServiceTypes
+from zeroconf import IPVersion, ServiceBrowser, ServiceStateChange, Zeroconf
 
 bond_types = {
     'CF': "Ceiling Fan",
@@ -29,8 +29,7 @@ class Plugin(indigo.PluginBase):
         self.indigo_log_handler.setLevel(self.logLevel)
         self.logger.debug(f"logLevel = {self.logLevel}")
 
-        self.found_bondbridges = {}    # zeroconf discovered devices
-        self.found_smartbridges = {}    # zeroconf discovered devices
+        self.found_devices = {}    # zeroconf discovered devices
 
         self.bond_bridges = {}  # dict of bridge devices, keyed by BondID, value id BondHome object
         self.bond_devices = {}  # dict of "client" devices, keyed by (bond) device_ID, value is Indigo device.id
@@ -42,25 +41,22 @@ class Plugin(indigo.PluginBase):
         services = ["_bond._tcp.local."]
         browser = ServiceBrowser(zeroconf, services, handlers=[self.on_service_state_change])
 
-    def shutdown(self):
-        self.logger.info("Stopping BondHome")
-
     def on_service_state_change(self, zeroconf: Zeroconf, service_type: str, name: str, state_change: ServiceStateChange) -> None:
         self.logger.debug(f"Service {name} of type {service_type} state changed: {state_change}")
 
         if state_change in [ServiceStateChange.Added, ServiceStateChange.Updated]:
             info = zeroconf.get_service_info(service_type, name)
             if service_type == "_bond._tcp.local.":
-                if name not in self.found_bondbridges:
-                    self.found_bondbridges[name] = info.server
+                if name not in self.found_devices:
+                    self.found_devices[name] = info.server
 
         elif state_change is ServiceStateChange.Removed:
             info = zeroconf.get_service_info(service_type, name)
             if service_type == "_bond._tcp.local.":
-                if name in self.found_bondbridges:
-                    del self.found_bondbridges[name]
+                if name in self.found_devices:
+                    del self.found_devices[name]
 
-        self.logger.debug(f"Found BondBridges: {self.found_bondbridges}")
+        self.logger.debug(f"Found BondBridges: {self.found_devices}")
 
     def closedPrefsConfigUi(self, valuesDict, userCancelled):
         if not userCancelled:
@@ -100,6 +96,16 @@ class Plugin(indigo.PluginBase):
                 return
             self.logger.debug(f"{device.name}: Bond version: {version}")
 
+            stateList = [
+                {'key': 'fw_ver', 'value': version['fw_ver']},
+                {'key': 'fw_date', 'value': version['fw_date']},
+                {'key': 'uptime_s', 'value': version['uptime_s']},
+                {'key': 'make', 'value': version['make']},
+                {'key': 'model', 'value': version['model']},
+                {'key': 'bondid', 'value': version['bondid']},
+            ]
+            device.updateStatesOnServer(stateList)
+
             try:
                 info = bridge.get_bridge_info()
             except (Exception,):
@@ -108,12 +114,6 @@ class Plugin(indigo.PluginBase):
             self.logger.debug(f"{device.name}: Bond info: {info}")
 
             stateList = [
-                {'key': 'fw_ver', 'value': version['fw_ver']},
-                {'key': 'fw_date', 'value': version['fw_date']},
-                {'key': 'uptime_s', 'value': version['uptime_s']},
-                {'key': 'make', 'value': version['make']},
-                {'key': 'model', 'value': version['model']},
-                {'key': 'bondid', 'value': version['bondid']},
                 {'key': 'name', 'value': info['name']},
                 {'key': 'location', 'value': info['location']},
                 {'key': 'brightnessLevel', 'value': info['bluelight']}
@@ -170,6 +170,11 @@ class Plugin(indigo.PluginBase):
         else:
             self.logger.error(f"{device.name}: deviceStartComm: Unknown device type: {device.deviceTypeId}")
 
+    # Undocumented API - runs after all devices have been started.  Actually, it's the super._postStartup() call that starts the devices.
+    def _postStartup(self):
+        super(Plugin, self)._postStartup()  # noqa
+        self.doDeviceStartup()
+
     def doDeviceStartup(self):
 
         for bondDevID in self.bond_devices.values():
@@ -222,22 +227,20 @@ class Plugin(indigo.PluginBase):
 
         if device.deviceTypeId == "bondBridge":
             bondID = device.states['bondid']
-            del self.bond_bridges[bondID]
+            if bondID in self.bond_bridges:
+                del self.bond_bridges[bondID]
 
         elif device.deviceTypeId == "smartBond":
             bondID = device.states['bondid']
-            del self.bond_bridges[bondID]
+            if bondID in self.bond_bridges:
+                del self.bond_bridges[bondID]
 
         elif device.deviceTypeId == "bondDevice":
-            del self.bond_devices[device.address]
+            if device.address in self.bond_devices:
+                del self.bond_devices[device.address]
 
         else:
             self.logger.error(f"{device.name}: deviceStopComm: Unknown device type: {device.deviceTypeId}")
-
-    # Undocumented API - runs after all devices have been started.  Actually, it's the super._postStartup() call that starts the devices.
-    def _postStartup(self):
-        super(Plugin, self)._postStartup()  # noqa
-        self.doDeviceStartup()
 
     ########################################
     # callback for state list changes, called from stateListOrDisplayStateIdChanged()
@@ -306,7 +309,7 @@ class Plugin(indigo.PluginBase):
         self.logger.debug(f"found_device_list: filter = {filter}, typeId = {typeId}, targetId = {targetId}, valuesDict = {valuesDict}")
         retList = [("Enter Manual IP address", "Discovered Devices:")]
         if typeId == "bondBridge":
-            for name, address in self.found_bondbridges.items():
+            for name, address in self.found_devices.items():
                 retList.append((address, name))
         self.logger.debug(f"found_station_list: retList = {retList}")
         return retList

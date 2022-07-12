@@ -77,9 +77,7 @@ class BondHome(object):
     # Commands to the Bridge
     ########################################
 
-    def device_action(self, device_id, action, payload=None):
-        if not payload:
-            payload = {}
+    def device_action(self, device_id, action, payload={}):
         url = f"http://{self.address}/v2/devices/{device_id}/actions/{action}"
         self.logger.debug(f"device_action, url = {url}, payload = {payload}")
         resp = requests.put(url, headers=self.token_header, json=payload)
@@ -114,7 +112,6 @@ class BondHome(object):
         resp = requests.get(url, headers=self.token_header)
         resp.raise_for_status()
         self.logger.debug(f"get_device_list: {resp.json()}")
-
         retList = []
         for key in resp.json():
             if not key.startswith("_"):     # skip internal keys
