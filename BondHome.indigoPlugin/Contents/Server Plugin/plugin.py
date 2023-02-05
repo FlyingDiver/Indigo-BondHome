@@ -356,7 +356,11 @@ class Plugin(indigo.PluginBase):
             address = None
         if not address:
             return retList
-        dev_info = self.known_devices[bondid][address]
+        try:
+            dev_info = self.known_devices[bondid][address]
+        except (Exception,):
+            return retList
+
         for cmd in dev_info['actions']:
             retList.append((cmd, cmd))
         return retList
@@ -425,9 +429,11 @@ class Plugin(indigo.PluginBase):
         valuesDict = actionProps
         errorMsgDict = indigo.Dict()
 
+        self.logger.debug(f"getActionConfigUiValues, bond_bridges = {self.bond_bridges}")
+
         # Preload the first bridge device, if not already specified
         if not valuesDict.get('bridge', None) and len(self.bond_bridges):
-            valuesDict['bridge'] = self.bond_bridges.keys()[0]
+            valuesDict['bridge'] = list(self.bond_bridges.keys())[0]
         return valuesDict, errorMsgDict
 
     def doDeviceAction(self, pluginAction):
