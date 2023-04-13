@@ -9,10 +9,12 @@ import json
 from bondhome import BondHome
 from zeroconf import IPVersion, ServiceBrowser, ServiceStateChange, Zeroconf
 
-bond_types = {
+bond_device_types = {
     'CF': "Ceiling Fan",
     'FP': "Fireplace",
     'MS': "Motorized Shades",
+    'LT': "Light",
+    'BD': "Bidet",
     'GX': "Generic Device",
     'UN': "Unknown Device"
 }
@@ -201,7 +203,7 @@ class Plugin(indigo.PluginBase):
                 name = dev_info.get('name', None)
                 if name:
                     device.name = f"{name} ({device.address})"
-                device.subModel = bond_types[bond_type]
+                device.subModel = bond_device_types.get(bond_type, f"Unknown Device ({bond_type})")
                 device.replaceOnServer()
 
                 newProps = device.pluginProps
