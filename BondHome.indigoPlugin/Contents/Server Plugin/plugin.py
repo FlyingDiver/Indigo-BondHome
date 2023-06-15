@@ -38,27 +38,26 @@ class Plugin(indigo.PluginBase):
         self.known_devices = {}  # nested dict of client devices, keyed by BondID then device_ID, value is dict returned by get_device()
 
     def startup(self):
-        self.logger.info("Starting BondHome")
+        self.logger.info("Starting Bond Bridge")
         zeroconf = Zeroconf(ip_version=IPVersion.V4Only)
         services = ["_bond._tcp.local."]
         browser = ServiceBrowser(zeroconf, services, handlers=[self.on_service_state_change])
 
     def on_service_state_change(self, zeroconf: Zeroconf, service_type: str, name: str, state_change: ServiceStateChange) -> None:
         self.logger.debug(f"Service {name} of type {service_type} state changed: {state_change}")
-
+        info = zeroconf.get_service_info(service_type, name)
+        self.logger.debug(f"Service info: {info}")
         if state_change in [ServiceStateChange.Added, ServiceStateChange.Updated]:
-            info = zeroconf.get_service_info(service_type, name)
             if service_type == "_bond._tcp.local.":
                 if name not in self.found_devices:
-                    self.found_devices[name] = info.server
+                    self.found_devices[name] = ".".join([f"{x}" for x in info.addresses[0]])    # address as string (xx.xx.xx.xx)
 
         elif state_change is ServiceStateChange.Removed:
-            info = zeroconf.get_service_info(service_type, name)
             if service_type == "_bond._tcp.local.":
                 if name in self.found_devices:
                     del self.found_devices[name]
 
-        self.logger.debug(f"Found BondBridges: {self.found_devices}")
+        self.logger.debug(f"Found Bond Bridges: {self.found_devices}")
 
     def closedPrefsConfigUi(self, valuesDict, userCancelled):
         if not userCancelled:
@@ -74,7 +73,7 @@ class Plugin(indigo.PluginBase):
 
         # Preload the first bridge for any non-bridge device, if not already specified
         if typeId == 'bondDevice' and not valuesDict.get('bridge', None) and len(self.bond_bridges):
-            valuesDict['bridge'] = self.bond_bridges.keys()[0]
+            valuesDict['bridge'] = list(self.bond_bridges.keys())[0]
         return valuesDict, errorMsgDict
 
     def deviceStartComm(self, device):
@@ -93,11 +92,11 @@ class Plugin(indigo.PluginBase):
 
             try:
                 version = bridge.get_bridge_version()
-            except (Exception,):
-                self.logger.debug(f"{device.name}: Error in get_bridge_version()")
+            except Exception as err:
+                self.logger.debug(f"{device.name}: Error in get_bridge_version(): {err}")
                 return
-            self.logger.debug(f"{device.name}: Bond version: {version}")
 
+            self.logger.debug(f"{device.name}: Bond version: {version}")
             stateList = [
                 {'key': 'fw_ver', 'value': version['fw_ver']},
                 {'key': 'fw_date', 'value': version['fw_date']},
@@ -110,17 +109,16 @@ class Plugin(indigo.PluginBase):
 
             try:
                 info = bridge.get_bridge_info()
-            except (Exception,):
-                self.logger.debug(f"{device.name}: Error in get_bridge_info()")
-                return
-            self.logger.debug(f"{device.name}: Bond info: {info}")
-
-            stateList = [
-                {'key': 'name', 'value': info['name']},
-                {'key': 'location', 'value': info['location']},
-                {'key': 'brightnessLevel', 'value': info['bluelight']}
-            ]
-            device.updateStatesOnServer(stateList)
+            except Exception as err:
+                self.logger.debug(f"{device.name}: Error in get_bridge_info(): {err}")
+            else:
+                self.logger.debug(f"{device.name}: Bond info: {info}")
+                stateList = [
+                    {'key': 'name', 'value': info['name']},
+                    {'key': 'location', 'value': info['location']},
+                    {'key': 'brightnessLevel', 'value': info['bluelight']}
+                ]
+                device.updateStatesOnServer(stateList)
 
             bondID = version['bondid']
             self.bond_bridges[bondID] = bridge
@@ -370,57 +368,73 @@ class Plugin(indigo.PluginBase):
     ########################################
     # Relay Action callback
     ########################################
-    def actionControlDevice(self, action, dev):
-        if action.deviceAction == indigo.kDeviceAction.TurnOn:
-            if dev.deviceTypeId == "bondBridge":
-                bondID = dev.states['bondid']
+    def actionControlDevice(self, pluginAction, device):
+        self.logger.debug(f"{device.name}: actionControlDevice pluginAction:{pluginAction}")
+
+        if pluginAction.deviceAction == indigo.kDeviceAction.TurnOn:
+            if device.deviceTypeId == "bondBridge":
+                bondID = device.states['bondid']
                 self.bond_bridges[bondID].set_bridge_info({"bluelight": 255})
-                dev.updateStateOnServer(key='brightnessLevel', value=100)
-            elif dev.deviceTypeId in ["bondDevice", "smartBond"]:
-                bridge = self.bond_bridges[dev.pluginProps["bridge"]]
-                bridge.device_action(dev.address, dev.pluginProps["on_command"])
+                device.updateStateOnServer(key='brightnessLevel', value=100)
+            elif device.deviceTypeId == "bondDevice":
+                bridge = self.bond_bridges[device.pluginProps["bridge"]]
+                parameter = indigo.activePlugin.substitute(device.pluginProps["on_parameter"])
+                if len(parameter):
+                    payload = {"argument": int(parameter)}
+                else:
+                    payload = {}
+                bridge.device_action(device.address, device.pluginProps["on_command"], payload)
+            else:
+                self.logger.warning(f"actionControlDevice: Device type {device.deviceTypeId} does not support On command")
 
-        elif action.deviceAction == indigo.kDeviceAction.TurnOff:
-            if dev.deviceTypeId == "bondBridge":
-                bondID = dev.states['bondid']
+        elif pluginAction.deviceAction == indigo.kDeviceAction.TurnOff:
+            if device.deviceTypeId == "bondBridge":
+                bondID = device.states['bondid']
                 self.bond_bridges[bondID].set_bridge_info({"bluelight": 0})
-                dev.updateStateOnServer(key='brightnessLevel', value=0)
-            elif dev.deviceTypeId == "bondDevice":
-                bridge = self.bond_bridges[dev.pluginProps["bridge"]]
-                bridge.device_action(dev.address, dev.pluginProps["off_command"])
+                device.updateStateOnServer(key='brightnessLevel', value=0)
+            elif device.deviceTypeId == "bondDevice":
+                bridge = self.bond_bridges[device.pluginProps["bridge"]]
+                parameter = indigo.activePlugin.substitute(device.pluginProps["off_parameter"])
+                if len(parameter):
+                    payload = {"argument": int(parameter)}
+                else:
+                    payload = {}
+                bridge.device_action(device.address, device.pluginProps["off_command"], payload)
+            else:
+                self.logger.warning(f"actionControlDevice: Device type {device.deviceTypeId} does not support Off command")
 
-        elif action.deviceAction == indigo.kDeviceAction.SetBrightness:
-            if dev.deviceTypeId == "bondBridge":
+        elif pluginAction.deviceAction == indigo.kDeviceAction.SetBrightness:
+            if device.deviceTypeId == "bondBridge":
                 level = int(action.actionValue * 2.55)  # bluelight scale is 0-255
-                bondID = dev.states['bondid']
+                bondID = device.states['bondid']
                 self.bond_bridges[bondID].set_bridge_info({"bluelight": level})
-                dev.updateStateOnServer(key='brightnessLevel', value=action.actionValue)
-            elif dev.deviceTypeId == "bondDevice":
-                pass
+                device.updateStateOnServer(key='brightnessLevel', value=action.actionValue)
+            else:
+                self.logger.warning(f"actionControlDevice: Device type {device.deviceTypeId} does not support SetBrightness command")
 
-        elif action.deviceAction == indigo.kDeviceAction.BrightenBy:
-            newBrightness = dev.brightness + action.actionValue
+        elif pluginAction.deviceAction == indigo.kDeviceAction.BrightenBy:
+            newBrightness = device.brightness + action.actionValue
             if newBrightness > 100:
                 newBrightness = 100
-            if dev.deviceTypeId == "bondBridge":
+            if device.deviceTypeId == "bondBridge":
                 level = int(newBrightness * 2.55)  # bluelight scale is 0-255
-                bondID = dev.states['bondid']
+                bondID = device.states['bondid']
                 self.bond_bridges[bondID].set_bridge_info({"bluelight": level})
-                dev.updateStateOnServer(key='brightnessLevel', value=newBrightness)
-            elif dev.deviceTypeId == "bondDevice":
-                pass
+                device.updateStateOnServer(key='brightnessLevel', value=newBrightness)
+            else:
+                self.logger.warning(f"actionControlDevice: Device type {device.deviceTypeId} does not support BrightenBy command")
 
-        elif action.deviceAction == indigo.kDeviceAction.DimBy:
-            newBrightness = dev.brightness - action.actionValue
+        elif pluginAction.deviceAction == indigo.kDeviceAction.DimBy:
+            newBrightness = device.brightness - action.actionValue
             if newBrightness < 0:
                 newBrightness = 0
-            if dev.deviceTypeId == "bondBridge":
+            if device.deviceTypeId == "bondBridge":
                 level = int(newBrightness * 2.55)  # bluelight scale is 0-255
-                bondID = dev.states['bondid']
+                bondID = device.states['bondid']
                 self.bond_bridges[bondID].set_bridge_info({"bluelight": level})
-                dev.updateStateOnServer(key='brightnessLevel', value=newBrightness)
-            elif dev.deviceTypeId == "bondDevice":
-                pass
+                device.updateStateOnServer(key='brightnessLevel', value=newBrightness)
+            else:
+                self.logger.warning(f"actionControlDevice: Device type {device.deviceTypeId} does not support DimBy command")
 
     ########################################
     # Plugin Actions object callbacks (pluginAction is an Indigo plugin action instance)

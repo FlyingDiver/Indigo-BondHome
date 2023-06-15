@@ -42,16 +42,18 @@ class BondHome(object):
         if not self.sock:
             self.sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
             self.sock.settimeout(PING_TIMEOUT)
-            self.logger.debug(u"udp_start() socket listener started")
+            self.logger.debug("udp_start() socket created")
 
         # start up the receiver thread
         self.receive_thread.start()
+        self.logger.debug("udp_start() socket listener started")
 
     def udp_receive(self):
         while True:
             now = time.time()
             if now > self.next_ping:
                 self.sock.sendto('\n'.encode("utf-8"), (self.address, 30007))
+                self.logger.debug("udp_receive() ping sent")
                 self.next_ping = now + PING_TIMEOUT
 
             try:
@@ -70,6 +72,7 @@ class BondHome(object):
             # fix up the data
             topic = data['t'].split('/')
             data['id'] = topic[1]
+            self.logger.debug(f"udp_receive() data: {data}")
 
             self.callback(data)
 

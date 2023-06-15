@@ -3,7 +3,7 @@
     <SupportURL>https://forums.indigodomo.com/viewforum.php?f=295</SupportURL>
 
     <Device id="bondBridge" type="dimmer">
-        <Name>Bond Home Bridge</Name>
+        <Name>Bond Bridge</Name>
         <ConfigUI>
             <Field id="found_list" type="menu" defaultValue="" >
                 <Label>Discovered Bridges:</Label>
@@ -66,7 +66,7 @@
             </State>
         </States>
      </Device>
-     
+
     <Device id="smartBond" type="custom">
         <Name>Smart by Bond Internal Bridge</Name>
         <ConfigUI>
@@ -137,12 +137,24 @@
                 <List class="self" method="get_action_list" dynamicReload="true"/>
                 <CallbackMethod>menuChanged</CallbackMethod>
             </Field>
+             <Field id="on_parameter" type="textfield">
+                <Label>On Parameter:</Label>
+            </Field>
             <Field id="off_command" type="menu">
                 <Label>Off Command:</Label>
                 <List class="self" method="get_action_list" dynamicReload="true"/>
                 <CallbackMethod>menuChanged</CallbackMethod>
             </Field>
-       </ConfigUI>
+            <Field id="off_parameter" type="textfield">
+                <Label>Off Parameter:</Label>
+            </Field>
+			<Field id="argumentNote1" type="label" fontSize="small" fontColor="darkgray">
+				<Label>Some device commands, such as 'SetSpeed' for ceiling fans, require an parameter.  Leave blank if not required.</Label>
+			</Field>
+			<Field id="argumentNote2" type="label" fontSize="small" fontColor="darkgray">
+				<Label>Variable and Device State Substitution is enabled for this field. Use the format %%v:12345%% for variables and %%d:12345:someStateId%% for device states.</Label>
+			</Field>
+        </ConfigUI>
         <States>
         </States>
     </Device>
