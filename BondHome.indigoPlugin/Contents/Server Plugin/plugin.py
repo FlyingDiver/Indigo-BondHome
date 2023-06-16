@@ -31,11 +31,12 @@ class Plugin(indigo.PluginBase):
         self.indigo_log_handler.setLevel(self.logLevel)
         self.logger.debug(f"logLevel = {self.logLevel}")
 
-        self.found_devices = {}    # zeroconf discovered devices
+        self.found_devices = {}         # zeroconf discovered devices
 
-        self.bond_bridges = {}  # dict of bridge devices, keyed by BondID, value id BondHome object
-        self.bond_devices = {}  # dict of "client" devices, keyed by (bond) device_ID, value is Indigo device.id
-        self.known_devices = {}  # nested dict of client devices, keyed by BondID then device_ID, value is dict returned by get_device()
+        self.bond_bridges = {}          # dict of bridge devices, keyed by BondID, value id BondHome object
+        self.bond_devices = {}          # dict of "client" devices, keyed by (bond) device_ID, value is Indigo device.id
+        self.deferred_start = {}        # devices that need to be started after the bridges are all running
+        self.known_devices = {}         # nested dict of client devices, keyed by BondID then device_ID, value is dict returned by get_device()
 
     def startup(self):
         self.logger.info("Starting Bond Bridge")
@@ -48,21 +49,27 @@ class Plugin(indigo.PluginBase):
         info = zeroconf.get_service_info(service_type, name)
         self.logger.debug(f"Service info: {info}")
         if state_change in [ServiceStateChange.Added, ServiceStateChange.Updated]:
-            if service_type == "_bond._tcp.local.":
-                if name not in self.found_devices:
-                    self.found_devices[name] = ".".join([f"{x}" for x in info.addresses[0]])    # address as string (xx.xx.xx.xx)
+            if service_type == "_bond._tcp.local." and name not in self.found_devices:
+                ip_address = ".".join([f"{x}" for x in info.addresses[0]])  # address as string (xx.xx.xx.xx)
+                try:
+                    bridge = BondHome(ip_address, "")
+                    bridge_version = bridge.get_bridge_version()
+                    bridge_info = bridge.get_bridge_info()
+                    del bridge
+                except Exception as err:
+                    self.logger.debug(f"Error creating BondHome object for {name}: {err}")
+                    return
+                self.found_devices[name] = {"ip_address": ip_address, "name": bridge_info['name'], "bondid": bridge_version['bondid']}
 
         elif state_change is ServiceStateChange.Removed:
-            if service_type == "_bond._tcp.local.":
-                if name in self.found_devices:
-                    del self.found_devices[name]
+            if service_type == "_bond._tcp.local." and name in self.found_devices:
+                del self.found_devices[name]
 
         self.logger.debug(f"Found Bond Bridges: {self.found_devices}")
 
     def closedPrefsConfigUi(self, valuesDict, userCancelled):
         if not userCancelled:
             self.logLevel = int(valuesDict.get("logLevel", logging.INFO))
-            self.logLevel = logging.INFO
             self.indigo_log_handler.setLevel(self.logLevel)
             self.logger.debug(f"logLevel = {self.logLevel}")
 
@@ -84,7 +91,7 @@ class Plugin(indigo.PluginBase):
 
         if device.deviceTypeId == "bondBridge":
             try:
-                bridge = BondHome(device.pluginProps['address'], device.pluginProps[u'token'])
+                bridge = BondHome(device.pluginProps['address'], device.pluginProps['token'])
             except Exception as err:
                 self.logger.debug(f"{device.name}: BondHome __init__ error: {err}")
                 device.updateStateImageOnServer(indigo.kStateImageSel.SensorTripped)
@@ -107,18 +114,20 @@ class Plugin(indigo.PluginBase):
             ]
             device.updateStatesOnServer(stateList)
 
-            try:
-                info = bridge.get_bridge_info()
-            except Exception as err:
-                self.logger.debug(f"{device.name}: Error in get_bridge_info(): {err}")
-            else:
-                self.logger.debug(f"{device.name}: Bond info: {info}")
-                stateList = [
-                    {'key': 'name', 'value': info['name']},
-                    {'key': 'location', 'value': info['location']},
-                    {'key': 'brightnessLevel', 'value': info['bluelight']}
-                ]
-                device.updateStatesOnServer(stateList)
+            # Smart by Bond devices don't implement get_bridge_info(), so skip this if not an actual Bond device
+            if version['make'] == 'Olibra':
+                try:
+                    info = bridge.get_bridge_info()
+                except Exception as err:
+                    self.logger.debug(f"{device.name}: Error in get_bridge_info(): {err}")
+                else:
+                    self.logger.debug(f"{device.name}: Bond info: {info}")
+                    stateList = [
+                        {'key': 'name', 'value': info['name']},
+                        {'key': 'location', 'value': info['location']},
+                        {'key': 'brightnessLevel', 'value': info['bluelight']}
+                    ]
+                    device.updateStatesOnServer(stateList)
 
             bondID = version['bondid']
             self.bond_bridges[bondID] = bridge
@@ -132,95 +141,64 @@ class Plugin(indigo.PluginBase):
             # start up the BPUP socket connection
             bridge.udp_start(self.receiveBPUP)
 
-        elif device.deviceTypeId == "smartBond":
-            try:
-                bridge = BondHome(device.pluginProps['address'], device.pluginProps[u'token'])
-            except Exception as err:
-                self.logger.debug(f"{device.name}: BondHome __init__ error: {err}")
-                device.updateStateImageOnServer(indigo.kStateImageSel.SensorTripped)
-                return
-
-            version = bridge.get_bridge_version()
-            self.logger.debug(f"{device.name}: BondHome version: {version}")
-            stateList = [
-                {'key': 'fw_ver', 'value': version['fw_ver']},
-                {'key': 'fw_date', 'value': version['fw_date']},
-                {'key': 'uptime_s', 'value': version['uptime_s']},
-                {'key': 'make', 'value': version['make']},
-                {'key': 'model', 'value': version['model']},
-                {'key': 'bondid', 'value': version['bondid']}
-            ]
-            device.updateStatesOnServer(stateList)
-
-            bondID = version['bondid']
-            self.bond_bridges[bondID] = bridge
-
-            # get all the devices the bridge knows about (usually only one, but it's possible that might change)
-            self.known_devices[bondID] = {}
-            for bond_dev in bridge.get_device_list():
-                self.known_devices[bondID][bond_dev] = bridge.get_device(bond_dev)
-            self.logger.debug(f"{device.name}: known_devices:\n{self.known_devices}")
-
-            # start up the BPUP socket connection
-            bridge.udp_start(self.receiveBPUP)
-
         elif device.deviceTypeId == "bondDevice":
-            self.bond_devices[device.address] = device.id   # save the device info, do startup later after bridges are started
-
+            bond_id = device.pluginProps['bridge']
+            if bond_id not in self.bond_bridges:
+                self.logger.debug(f"{device.name}: Deferring device start until bridge is started")
+                self.deferred_start[device.address] = device.id  # save the device info, do startup later after bridges are started
+                return
+            else:
+                self.do_device_startup(device)
         else:
-            self.logger.error(f"{device.name}: deviceStartComm: Unknown device type: {device.deviceTypeId}")
+            self.logger.error(f"{device.name}: Unknown device type: {device.deviceTypeId}")
 
     # Undocumented API - runs after all devices have been started.  Actually, it's the super._postStartup() call that starts the devices.
     def _postStartup(self):
         super(Plugin, self)._postStartup()  # noqa
-        self.doDeviceStartup()
+        self.logger.debug(f"_postStartup: starting deferred devices: {self.deferred_start}")
+        for device_id in self.deferred_start.values():
+            self.do_device_startup(indigo.devices[device_id])
 
-    def doDeviceStartup(self):
+    def do_device_startup(self, device):
 
-        for bondDevID in self.bond_devices.values():
+        bond_id = device.pluginProps['bridge']
+        if bond_id not in self.bond_bridges:
+            self.logger.warning(f"{device.name}: Can't start device, bridge not active: {bond_id}")
+            return
 
-            device = indigo.devices[bondDevID]
-            self.logger.debug(f"{device.name}: doDeviceStartup: {device.deviceTypeId} ({device.address})")
+        self.logger.debug(f"{device.name}: do_device_startup: {device.deviceTypeId} ({device.address}) with Bridge {bond_id}")
 
-            bond_id = device.pluginProps['bridge']
-            if bond_id not in self.bond_bridges:
-                return
-            self.logger.debug(f"{device.name}: doDeviceStartup: using bond_id = {bond_id}")
+        bridge = self.bond_bridges[bond_id]
+        dev_info = self.known_devices[bond_id].get(device.address, None)
+        if not dev_info:
+            self.logger.debug(f"{device.name}: do_device_startup: no device info for {device.address}")
+            return
 
-            bridge = self.bond_bridges[bond_id]
-            dev_info = self.known_devices[bond_id].get(device.address, None)
-            if not dev_info:
-                self.logger.debug(f"{device.name}: doDeviceStartup: no device info for {device.address}")
-                return
+        self.logger.debug(f"{device.name}: Device Info: {dev_info}")
+        bond_type = dev_info.get('type', 'UN')
 
-            bond_type = dev_info.get('type', 'UN')
+        if dev_info and not device.pluginProps.get('bond_type', None):
+            self.logger.debug(f"{device.name}: Updating Device info:\n{dev_info}")
+            device.subModel = bond_device_types.get(bond_type, f"Unknown Device ({bond_type})")
+            device.replaceOnServer()
 
-            if dev_info and not device.pluginProps.get('bond_type', None):
-                self.logger.debug(f"{device.name}: Updating Device info:\n{dev_info}")
+            newProps = device.pluginProps
+            newProps.update({'bond_type': bond_type})
+            device.replacePluginPropsOnServer(newProps)
 
-                name = dev_info.get('name', None)
-                if name:
-                    device.name = f"{name} ({device.address})"
-                device.subModel = bond_device_types.get(bond_type, f"Unknown Device ({bond_type})")
-                device.replaceOnServer()
+        states = bridge.get_device_state(device.address)
+        self.logger.debug(f"{device.name}: Device states: {states}")
+        device.stateListOrDisplayStateIdChanged()
 
-                newProps = device.pluginProps
-                newProps.update({'bond_type': bond_type})
-                device.replacePluginPropsOnServer(newProps)
+        if bond_type == 'GX':
+            device.updateStateOnServer(key='onOffState', value=bool(states['power']))
 
-            states = bridge.get_device_state(device.address)
-            self.logger.debug(f"{device.name}: Device states: {states}")
-            device.stateListOrDisplayStateIdChanged()
+        elif bond_type == 'FP':
+            device.updateStateOnServer(key='onOffState', value=bool(states['power']))
+            device.updateStateOnServer(key='flame', value=states['flame'])
 
-            if bond_type == 'GX':
-                device.updateStateOnServer(key='onOffState', value=bool(states['power']))
-
-            elif bond_type == 'FP':
-                device.updateStateOnServer(key='onOffState', value=bool(states['power']))
-                device.updateStateOnServer(key='flame', value=states['flame'])
-
-            elif bond_type == 'MS':
-                device.updateStateOnServer(key='onOffState', value=bool(states['open']))
+        elif bond_type == 'MS':
+            device.updateStateOnServer(key='onOffState', value=bool(states['open']))
 
     def deviceStopComm(self, device):
         self.logger.info(f"{device.name}: Stopping {device.deviceTypeId} Device {device.id}")
@@ -251,7 +229,7 @@ class Plugin(indigo.PluginBase):
 
         # add custom states as needed for bond device type
         if device.pluginProps.get("bond_type", None) == "FP":
-            flame_state = self.getDeviceStateDictForNumberType(u"flame", u"Flame", u"Flame")
+            flame_state = self.getDeviceStateDictForNumberType("flame", "Flame", "Flame")
             state_list.append(flame_state)
 
         return state_list
@@ -309,8 +287,8 @@ class Plugin(indigo.PluginBase):
         self.logger.debug(f"found_device_list: filter = {filter}, typeId = {typeId}, targetId = {targetId}, valuesDict = {valuesDict}")
         retList = [("Enter Manual IP address", "Discovered Devices:")]
         if typeId == "bondBridge":
-            for name, address in self.found_devices.items():
-                retList.append((address, name))
+            for name, data in self.found_devices.items():
+                retList.append((data['ip_address'], f"{data['name']} ({data['bondid']} @ {data['ip_address']})"))
         self.logger.debug(f"found_station_list: retList = {retList}")
         return retList
 
@@ -372,7 +350,7 @@ class Plugin(indigo.PluginBase):
         self.logger.debug(f"{device.name}: actionControlDevice pluginAction:{pluginAction}")
 
         if pluginAction.deviceAction == indigo.kDeviceAction.TurnOn:
-            if device.deviceTypeId == "bondBridge":
+            if device.deviceTypeId == "bondBridge" and device.states['make'] == 'Olibra':
                 bondID = device.states['bondid']
                 self.bond_bridges[bondID].set_bridge_info({"bluelight": 255})
                 device.updateStateOnServer(key='brightnessLevel', value=100)
@@ -388,7 +366,7 @@ class Plugin(indigo.PluginBase):
                 self.logger.warning(f"actionControlDevice: Device type {device.deviceTypeId} does not support On command")
 
         elif pluginAction.deviceAction == indigo.kDeviceAction.TurnOff:
-            if device.deviceTypeId == "bondBridge":
+            if device.deviceTypeId == "bondBridge" and device.states['make'] == 'Olibra':
                 bondID = device.states['bondid']
                 self.bond_bridges[bondID].set_bridge_info({"bluelight": 0})
                 device.updateStateOnServer(key='brightnessLevel', value=0)
@@ -404,7 +382,7 @@ class Plugin(indigo.PluginBase):
                 self.logger.warning(f"actionControlDevice: Device type {device.deviceTypeId} does not support Off command")
 
         elif pluginAction.deviceAction == indigo.kDeviceAction.SetBrightness:
-            if device.deviceTypeId == "bondBridge":
+            if device.deviceTypeId == "bondBridge" and device.states['make'] == 'Olibra':
                 level = int(action.actionValue * 2.55)  # bluelight scale is 0-255
                 bondID = device.states['bondid']
                 self.bond_bridges[bondID].set_bridge_info({"bluelight": level})
@@ -416,7 +394,7 @@ class Plugin(indigo.PluginBase):
             newBrightness = device.brightness + action.actionValue
             if newBrightness > 100:
                 newBrightness = 100
-            if device.deviceTypeId == "bondBridge":
+            if device.deviceTypeId == "bondBridge" and device.states['make'] == 'Olibra':
                 level = int(newBrightness * 2.55)  # bluelight scale is 0-255
                 bondID = device.states['bondid']
                 self.bond_bridges[bondID].set_bridge_info({"bluelight": level})
@@ -428,7 +406,7 @@ class Plugin(indigo.PluginBase):
             newBrightness = device.brightness - action.actionValue
             if newBrightness < 0:
                 newBrightness = 0
-            if device.deviceTypeId == "bondBridge":
+            if device.deviceTypeId == "bondBridge" and device.states['make'] == 'Olibra':
                 level = int(newBrightness * 2.55)  # bluelight scale is 0-255
                 bondID = device.states['bondid']
                 self.bond_bridges[bondID].set_bridge_info({"bluelight": level})
@@ -510,5 +488,6 @@ class Plugin(indigo.PluginBase):
     ########################################
 
     def dumpConfig(self):
+        self.logger.info(f"\n{json.dumps(self.found_devices, sort_keys=True, indent=4, separators=(',', ': '))}")
         self.logger.info(f"\n{json.dumps(self.known_devices, sort_keys=True, indent=4, separators=(',', ': '))}")
         return True

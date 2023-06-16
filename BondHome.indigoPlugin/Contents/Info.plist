@@ -3,13 +3,13 @@
 <plist version="1.0">
 <dict>
 	<key>PluginVersion</key>
-	<string>2022.1.0</string>
+	<string>2022.1.1</string>
 	<key>ServerApiVersion</key>
 	<string>3.1</string>
 	<key>IwsApiVersion</key>
 	<string>1.0.0</string>
 	<key>CFBundleDisplayName</key>
-	<string>Bond Bridge</string>
+	<string>Bond Home</string>
 	<key>CFBundleIdentifier</key>
 	<string>com.flyingdiver.indigoplugin.bondhome</string>
 	<key>CFBundleVersion</key>

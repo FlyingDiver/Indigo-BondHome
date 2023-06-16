@@ -62,19 +62,18 @@ class BondHome(object):
                 continue
             except socket.error as err:
                 raise
+            else:
+                data = json.loads(json_data.decode("utf-8"))
 
-            data = json.loads(json_data.decode("utf-8"))
+                # ignore ping messages
+                if len(data) == 1:
+                    continue
 
-            # ignore ping messages
-            if len(data) == 1:
-                continue
-
-            # fix up the data
-            topic = data['t'].split('/')
-            data['id'] = topic[1]
-            self.logger.debug(f"udp_receive() data: {data}")
-
-            self.callback(data)
+                # fix up the data
+                topic = data['t'].split('/')
+                data['id'] = topic[1]
+                self.logger.debug(f"udp_receive() data: {data}")
+                self.callback(data)
 
     ########################################
     # Commands to the Bridge
