@@ -58,7 +58,7 @@ class Plugin(indigo.PluginBase):
                 except Exception as err:
                     self.logger.debug(f"Error creating BondHome object for {name}: {err}")
                     return
-                self.found_devices[name] = {"ip_address": ip_address, "model": bridge_version['model'], "bondid": bridge_version['bondid']}
+                self.found_devices[name] = {"ip_address": ip_address, "make": bridge_version['make'], "model": bridge_version['model'], "bondid": bridge_version['bondid']}
 
         elif state_change is ServiceStateChange.Removed:
             if service_type == "_bond._tcp.local." and name in self.found_devices:
@@ -287,7 +287,7 @@ class Plugin(indigo.PluginBase):
         retList = [("Enter Manual IP address", "Discovered Devices:")]
         if typeId == "bondBridge":
             for name, data in self.found_devices.items():
-                retList.append((data['ip_address'], f"{data['model']} ({data['bondid']} @ {data['ip_address']})"))
+                retList.append((data['ip_address'], f"{data['make']} {data['model']} ({data['bondid']} @ {data['ip_address']})"))
         self.logger.debug(f"found_station_list: retList = {retList}")
         return retList
 
