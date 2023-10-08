@@ -194,7 +194,7 @@ class Plugin(indigo.PluginBase):
 
         elif bond_type == 'FP':
             device.updateStateOnServer(key='onOffState', value=bool(states['power']))
-            device.updateStateOnServer(key='flame', value=states['flame'])
+            device.updateStateOnServer(key='flame', value=states.get('flame', 0))
 
         elif bond_type == 'MS':
             device.updateStateOnServer(key='onOffState', value=bool(states['open']))
@@ -271,7 +271,7 @@ class Plugin(indigo.PluginBase):
 
         elif bond_type == 'FP':
             device.updateStateOnServer(key='onOffState', value=bool(data['b']['power']))
-            device.updateStateOnServer(key='flame', value=data['b']['flame'])
+            device.updateStateOnServer(key='flame', value=data['b'].get('flame', 0))
 
         elif bond_type == 'MS':
             device.updateStateOnServer(key='onOffState', value=bool(data['b']['open']))
@@ -355,7 +355,10 @@ class Plugin(indigo.PluginBase):
                 device.updateStateOnServer(key='brightnessLevel', value=100)
             elif device.deviceTypeId == "bondDevice":
                 bridge = self.bond_bridges[device.pluginProps["bridge"]]
-                parameter = indigo.activePlugin.substitute(device.pluginProps["on_parameter"])
+                try:
+                    parameter = indigo.activePlugin.substitute(device.pluginProps["on_parameter"])
+                except Exception as err:
+                    parameter = ""
                 if len(parameter):
                     payload = {"argument": int(parameter)}
                 else:
@@ -371,7 +374,10 @@ class Plugin(indigo.PluginBase):
                 device.updateStateOnServer(key='brightnessLevel', value=0)
             elif device.deviceTypeId == "bondDevice":
                 bridge = self.bond_bridges[device.pluginProps["bridge"]]
-                parameter = indigo.activePlugin.substitute(device.pluginProps["off_parameter"])
+                try:
+                    parameter = indigo.activePlugin.substitute(device.pluginProps["off_parameter"])
+                except Exception as err:
+                    parameter = ""
                 if len(parameter):
                     payload = {"argument": int(parameter)}
                 else:
@@ -379,6 +385,25 @@ class Plugin(indigo.PluginBase):
                 bridge.device_action(device.address, device.pluginProps["off_command"], payload)
             else:
                 self.logger.warning(f"actionControlDevice: Device type {device.deviceTypeId} does not support Off command")
+
+        elif pluginAction.deviceAction == indigo.kDeviceAction.Toggle:
+            if device.deviceTypeId == "bondBridge" and device.states['make'] == 'Olibra':
+                bondID = device.states['bondid']
+                self.bond_bridges[bondID].set_bridge_info({"bluelight": 0})
+                device.updateStateOnServer(key='brightnessLevel', value=0)
+            elif device.deviceTypeId == "bondDevice":
+                bridge = self.bond_bridges[device.pluginProps["bridge"]]
+                try:
+                    parameter = indigo.activePlugin.substitute(device.pluginProps["off_parameter"])
+                except Exception as err:
+                    parameter = ""
+                if len(parameter):
+                    payload = {"argument": int(parameter)}
+                else:
+                    payload = {}
+                bridge.device_action(device.address, device.pluginProps["off_command"], payload)
+            else:
+                self.logger.warning(f"actionControlDevice: Device type {device.deviceTypeId} does not support Toggle command")
 
         elif pluginAction.deviceAction == indigo.kDeviceAction.SetBrightness:
             if device.deviceTypeId == "bondBridge" and device.states['make'] == 'Olibra':
