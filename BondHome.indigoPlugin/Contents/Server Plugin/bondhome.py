@@ -79,9 +79,8 @@ class BondHome(object):
         url = f"http://{self.address}/v2/devices/{device_id}/actions/{action}"
         self.logger.debug(f"device_action, url = {url}, payload = {payload}")
         resp = requests.put(url, headers=self.token_header, json=payload)
-        resp.raise_for_status()
-        self.logger.debug(f"device_action, resp = {resp}")
-        return resp
+        if not resp.ok:
+            self.logger.warning(f"Device Action error {resp.status_code} for {url} with payload {payload}")
 
     def get_bridge_version(self):
         self.logger.debug(f"get_bridge_version")
