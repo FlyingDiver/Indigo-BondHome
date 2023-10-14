@@ -29,9 +29,8 @@ class BondHome(object):
         self.logger.debug(f"BondHome __init__ address = {address}, token = {token}")
 
     def __del__(self):
-        device = indigo.devices[self.deviceID]
-        self.sock.close()
-        self.stopFlag.set()
+        if self.sock:
+            self.sock.close()
 
     ########################################
     # Bond Push UDP Protocol (BPUP)
@@ -53,7 +52,7 @@ class BondHome(object):
             now = time.time()
             if now > self.next_ping:
                 self.sock.sendto('\n'.encode("utf-8"), (self.address, 30007))
-                self.logger.debug("udp_receive() ping sent")
+                self.logger.threaddebug("udp_receive() ping sent")
                 self.next_ping = now + PING_TIMEOUT
 
             try:
@@ -64,16 +63,13 @@ class BondHome(object):
                 raise
             else:
                 data = json.loads(json_data.decode("utf-8"))
+                self.logger.threaddebug(f"udp_receive() data: {data}")
 
-                # ignore ping messages
-                if len(data) == 1:
-                    continue
-
-                # fix up the data
-                topic = data['t'].split('/')
-                data['id'] = topic[1]
-                self.logger.debug(f"udp_receive() data: {data}")
-                self.callback(data)
+            if topic := data.get('t'):
+                parts = topic.split('/')
+                if parts[0] == 'devices' and parts[2] == 'state':   # state update
+                    data['id'] = parts[1]
+                    self.callback(data)
 
     ########################################
     # Commands to the Bridge

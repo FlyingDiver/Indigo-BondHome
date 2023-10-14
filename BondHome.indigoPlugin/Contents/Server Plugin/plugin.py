@@ -141,8 +141,8 @@ class Plugin(indigo.PluginBase):
             bridge.udp_start(self.receiveBPUP)
 
         elif device.deviceTypeId == "bondDevice":
-            bond_id = device.pluginProps['bridge']
-            if bond_id not in self.bond_bridges:
+            bridge_id = device.pluginProps['bridge']
+            if bridge_id not in self.bond_bridges:
                 self.logger.debug(f"{device.name}: Deferring device start until bridge is started")
                 self.deferred_start[device.address] = device.id  # save the device info, do startup later after bridges are started
                 return
@@ -160,19 +160,20 @@ class Plugin(indigo.PluginBase):
 
     def do_device_startup(self, device):
 
-        bond_id = device.pluginProps['bridge']
-        if bond_id not in self.bond_bridges:
-            self.logger.warning(f"{device.name}: Can't start device, bridge not active: {bond_id}")
+        bridge_id = device.pluginProps['bridge']
+        if bridge_id not in self.bond_bridges:
+            self.logger.warning(f"{device.name}: Can't start device, bridge not active: {bridge_id}")
             return
 
-        self.logger.debug(f"{device.name}: do_device_startup: {device.deviceTypeId} ({device.address}) with Bridge {bond_id}")
+        self.logger.debug(f"{device.name}: do_device_startup: {device.deviceTypeId} ({device.address}) with Bridge {bridge_id}")
 
-        bridge = self.bond_bridges[bond_id]
-        dev_info = self.known_devices[bond_id].get(device.address, None)
+        bridge = self.bond_bridges[bridge_id]
+        dev_info = self.known_devices[bridge_id].get(device.address, None)
         if not dev_info:
             self.logger.debug(f"{device.name}: do_device_startup: no device info for {device.address}")
             return
 
+        self.bond_devices[device.address] = device.id
         self.logger.debug(f"{device.name}: Device Info: {dev_info}")
         bond_type = dev_info.get('type', 'UN')
 
@@ -266,15 +267,19 @@ class Plugin(indigo.PluginBase):
 
         bond_type = device.pluginProps['bond_type']
         self.logger.threaddebug(f"{device.name}: bond_type: {bond_type}")
-        if bond_type == 'GX':
-            device.updateStateOnServer(key='onOffState', value=bool(data['b']['power']))
+        if bond_type in ['CF', 'GX']:
+            state = data.get('b').get('power')
+            device.updateStateOnServer(key='onOffState', value=bool(state))
 
         elif bond_type == 'FP':
-            device.updateStateOnServer(key='onOffState', value=bool(data['b']['power']))
-            device.updateStateOnServer(key='flame', value=data['b'].get('flame', 0))
+            state = data.get('b').get('power')
+            device.updateStateOnServer(key='onOffState', value=bool(state))
+            flame = data.get('b').get('flame')
+            device.updateStateOnServer(key='flame', value=flame)
 
         elif bond_type == 'MS':
-            device.updateStateOnServer(key='onOffState', value=bool(data['b']['open']))
+            state = data.get('b').get('open')
+            device.updateStateOnServer(key='onOffState', value=bool(state))
 
     ########################################
     #
