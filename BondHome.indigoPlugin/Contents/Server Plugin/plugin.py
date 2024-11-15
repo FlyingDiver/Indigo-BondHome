@@ -1,11 +1,13 @@
 #! /usr/bin/env python
 # -*- coding: utf-8 -*-
+from ipaddress import ip_address
 
 import indigo  # noqa
 import time
 import logging
 import requests
 import json
+import socket
 from bondhome import BondHome
 from zeroconf import IPVersion, ServiceBrowser, ServiceStateChange, Zeroconf
 
@@ -50,15 +52,15 @@ class Plugin(indigo.PluginBase):
         self.logger.debug(f"Service info: {info}")
         if state_change in [ServiceStateChange.Added, ServiceStateChange.Updated]:
             if service_type == "_bond._tcp.local." and name not in self.found_devices:
-                ip_address = ".".join([f"{x}" for x in info.addresses[0]])  # address as string (xx.xx.xx.xx)
+                ipaddr = ".".join([f"{x}" for x in info.addresses[0]])  # address as string (xx.xx.xx.xx)
                 try:
-                    bridge = BondHome(ip_address, "")
+                    bridge = BondHome(ipaddr, "")
                     bridge_version = bridge.get_bridge_version()
                     del bridge
                 except Exception as err:
                     self.logger.debug(f"Error creating BondHome object for {name}: {err}")
                     return
-                self.found_devices[name] = {"ip_address": ip_address, "make": bridge_version['make'], "model": bridge_version['model'], "bondid": bridge_version['bondid']}
+                self.found_devices[name] = {"hostname": info.server, "ip_address": ipaddr, "make": bridge_version['make'], "model": bridge_version['model'], "bondid": bridge_version['bondid']}
 
         elif state_change is ServiceStateChange.Removed:
             if service_type == "_bond._tcp.local." and name in self.found_devices:
@@ -90,7 +92,10 @@ class Plugin(indigo.PluginBase):
 
         if device.deviceTypeId == "bondBridge":
             try:
-                bridge = BondHome(device.pluginProps['address'], device.pluginProps['token'])
+                # using when creating the Bond device causes all operations to be very slow.
+                # So we'll use the IP address instead.
+                bridge = BondHome(socket.gethostbyname(device.pluginProps['address']),
+                                  device.pluginProps['token'])
             except Exception as err:
                 self.logger.debug(f"{device.name}: BondHome __init__ error: {err}")
                 device.updateStateImageOnServer(indigo.kStateImageSel.SensorTripped)
@@ -292,7 +297,7 @@ class Plugin(indigo.PluginBase):
         retList = [("Enter Manual IP address", "Discovered Devices:")]
         if typeId == "bondBridge":
             for name, data in self.found_devices.items():
-                retList.append((data['ip_address'], f"{data['make']} {data['model']} ({data['bondid']} @ {data['ip_address']})"))
+                retList.append((data['hostname'], f"{data['make']} {data['model']} ({data['bondid']} @ {data['ip_address']})"))
         self.logger.debug(f"found_device_list: retList = {retList}")
         return retList
 
