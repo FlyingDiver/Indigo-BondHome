@@ -144,3 +144,4 @@ BondHome.bbprojectd/
 BondHome.indigoPlugin/.idea/
 
 .idea/
+/BondHome.indigoPlugin/Contents/Packages/

@@ -47,6 +47,8 @@ class BondHome(object):
         self.receive_thread.start()
         self.logger.debug("udp_start() socket listener started")
 
+        self.enable_bpup(True)
+
     def udp_receive(self):
         while True:
             now = time.time()
@@ -157,6 +159,14 @@ class BondHome(object):
     def set_device_command_signal(self, device_id, command_id, payload):
         self.logger.debug(f"set_device_command_signal: {device_id}, {command_id}, {payload}")
         url = "http://{}/v2/devices/{}/commands/{}/signal".format(self.address, device_id, command_id)
+        resp = requests.patch(url, headers=self.token_header, json=payload)
+        resp.raise_for_status()
+        return resp.json()
+
+    def enable_bpup(self, enable=True):
+        self.logger.debug(f"enable_bpup: {enable}")
+        url = "http://{}/v2/api/bpup".format(self.address)
+        payload = {"broadcast": enable}
         resp = requests.patch(url, headers=self.token_header, json=payload)
         resp.raise_for_status()
         return resp.json()

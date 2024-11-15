@@ -293,7 +293,7 @@ class Plugin(indigo.PluginBase):
         if typeId == "bondBridge":
             for name, data in self.found_devices.items():
                 retList.append((data['ip_address'], f"{data['make']} {data['model']} ({data['bondid']} @ {data['ip_address']})"))
-        self.logger.debug(f"found_station_list: retList = {retList}")
+        self.logger.debug(f"found_device_list: retList = {retList}")
         return retList
 
     def menuChanged(self, valuesDict, typeId, devId):

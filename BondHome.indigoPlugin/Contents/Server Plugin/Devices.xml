@@ -11,14 +11,14 @@
                 <List class="self" method="found_device_list" dynamicReload="true"/>
                  <CallbackMethod>menuChanged</CallbackMethod>
             </Field>
-            <Field id="address" type="textfield"  defaultValue="" tooltip="Enter IP address or Hostname of gateway.">
+            <Field id="address" type="textfield"  defaultValue="" tooltip="Enter IP address or Hostname of Bond device.">
 				<Label>IP Address or Hostname:</Label>
                  <CallbackMethod>menuChanged</CallbackMethod>
 			</Field>
 			<Field id="token" type="textfield" defaultValue="" tooltip="Local Token">
 				<Label>Local Token:</Label>
 			</Field>
-        </ConfigUI>
+       </ConfigUI>
         <States>
             <State id="fw_ver" readonly="true">
                 <ValueType >String</ValueType>
