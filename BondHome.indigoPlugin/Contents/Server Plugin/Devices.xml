@@ -13,7 +13,6 @@
             </Field>
             <Field id="address" type="textfield"  defaultValue="" tooltip="Enter IP address or Hostname of Bond device.">
 				<Label>IP Address or Hostname:</Label>
-                 <CallbackMethod>menuChanged</CallbackMethod>
 			</Field>
 			<Field id="token" type="textfield" defaultValue="" tooltip="Local Token">
 				<Label>Local Token:</Label>
