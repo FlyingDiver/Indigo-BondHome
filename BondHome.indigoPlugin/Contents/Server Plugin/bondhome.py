@@ -73,11 +73,18 @@ class BondHome(object):
                     data['id'] = parts[1]
                     self.callback(data)
 
+    def udp_stop(self):
+        self.enable_bpup(False)
+        if self.sock:
+            self.sock.close()
+            self.sock = None
+            self.logger.debug("udp_stop() socket closed")
+
     ########################################
     # Commands to the Bridge
     ########################################
 
-    def device_action(self, device_id, action, payload={}):
+    def device_action(self, device_id, action, payload=None):
         url = f"http://{self.address}/v2/devices/{device_id}/actions/{action}"
         self.logger.debug(f"device_action, url = {url}, payload = {payload}")
         resp = requests.put(url, headers=self.token_header, json=payload)

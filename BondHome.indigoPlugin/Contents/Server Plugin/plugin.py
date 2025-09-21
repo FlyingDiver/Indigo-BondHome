@@ -211,6 +211,7 @@ class Plugin(indigo.PluginBase):
         if device.deviceTypeId == "bondBridge":
             bondID = device.states['bondid']
             if bondID in self.bond_bridges:
+                self.bond_bridges[bondID].udp_stop()
                 del self.bond_bridges[bondID]
 
         elif device.deviceTypeId == "smartBond":
