@@ -68,11 +68,15 @@ class Plugin(indigo.PluginBase):
 
         self.logger.debug(f"Found Bond Bridges: {self.found_devices}")
 
+        ########################################
+
     def closedPrefsConfigUi(self, valuesDict, userCancelled):
         if not userCancelled:
             self.logLevel = int(valuesDict.get("logLevel", logging.INFO))
             self.indigo_log_handler.setLevel(self.logLevel)
             self.logger.debug(f"logLevel = {self.logLevel}")
+
+        ########################################
 
     def getDeviceConfigUiValues(self, pluginProps, typeId, devId):
         self.logger.debug(f"getDeviceConfigUiValues, typeId = {typeId}, devId = {devId}, pluginProps = {pluginProps}")
@@ -84,6 +88,132 @@ class Plugin(indigo.PluginBase):
             valuesDict['bridge'] = list(self.bond_bridges.keys())[0]
         return valuesDict, errorMsgDict
 
+        ########################################
+
+    def getDeviceFactoryUiValues(self, devIdList):
+        self.logger.debug(f"getDeviceFactoryUiValues: devIdList = {devIdList}")
+
+        valuesDict = indigo.Dict()
+        errorMsgDict = indigo.Dict()
+
+        # change default to creating devices if there's at least one bridge defined
+
+        if len(self.bond_bridges) > 0:
+            valuesDict["deviceType"] = "bondDevice"
+            valuesDict["bridge"] = self.bond_bridges[list(self.bond_bridges.keys())[0]].devID
+
+        return valuesDict, errorMsgDict
+
+    def validateDeviceFactoryUi(self, valuesDict, devIdList):
+        self.logger.threaddebug(f"validateDeviceFactoryUi: valuesDict = {valuesDict}, devIdList = {devIdList}")
+        errorsDict = indigo.Dict()
+        valid = True
+
+        if valuesDict["deviceType"] == "bondBridge":
+            if valuesDict["ip_address"] == "":
+                errorsDict["bridge"] = "No Bond Bridge Specified"
+                self.logger.warning("validateDeviceFactoryUi - No Bond Bridge Specified")
+                valid = False
+
+        elif valuesDict["deviceType"] == "bondRelay":
+            if valuesDict["account"] == 0:
+                errorsDict["account"] = "No Ecobee Account Specified"
+                self.logger.warning("validateDeviceFactoryUi - No Ecobee Account Specified")
+                valid = False
+
+            if len(valuesDict["address"]) == 0:
+                errorsDict["address"] = "No Sensor Specified"
+                self.logger.warning("validateDeviceFactoryUi - No Sensor Specified")
+                valid = False
+
+        elif valuesDict["deviceType"] == "bondDimmer":
+            if valuesDict["account"] == 0:
+                errorsDict["account"] = "No Ecobee Account Specified"
+                self.logger.warning("validateDeviceFactoryUi - No Ecobee Account Specified")
+                valid = False
+
+            if len(valuesDict["address"]) == 0:
+                errorsDict["address"] = "No Sensor Specified"
+                self.logger.warning("validateDeviceFactoryUi - No Sensor Specified")
+                valid = False
+
+        return valid, valuesDict, errorsDict
+
+    def closedDeviceFactoryUi(self, valuesDict, userCancelled, devIdList):
+
+        if userCancelled:
+            self.logger.debug("closedDeviceFactoryUi: user cancelled")
+            return
+
+        self.logger.debug(f"closedDeviceFactoryUi: valuesDict =\n{valuesDict}\ndevIdList =\n{devIdList}")
+
+        if valuesDict["deviceType"] == "bondBridge":
+
+            address = valuesDict["ip_address"]
+
+            dev = indigo.device.create(indigo.kProtocol.Plugin, address=address, deviceTypeId="bondBridge")
+            dev.model = "Bond Bridge"
+            dev.name = f"Bond Bridge ({dev.id})"
+            dev.replaceOnServer()
+
+            self.logger.info(f"Created Bond Bridge '{dev.name}'")
+
+        elif valuesDict["deviceType"] == "bondRelay":
+
+            address = valuesDict["address"]
+
+            ecobee = self.ecobee_accounts[int(valuesDict["account"])]
+            thermostat = ecobee.thermostats.get(address)
+            name = f"Ecobee {thermostat.get('name')}"
+            device_type = thermostat.get('modelNumber', 'Unknown')
+
+            dev = indigo.device.create(indigo.kProtocol.Plugin, address=address, name=name, deviceTypeId="EcobeeThermostat")
+            dev.model = "Ecobee Thermostat"
+            dev.subModel = ECOBEE_MODELS.get(device_type, 'Unknown')
+            dev.replaceOnServer()
+
+            self.logger.info(f"Created EcobeeThermostat device '{dev.name}'")
+
+            newProps = dev.pluginProps
+            newProps["account"] = valuesDict["account"]
+            newProps["holdType"] = valuesDict["holdType"]
+            newProps["device_type"] = device_type
+            newProps["NumHumidityInputs"] = 1
+            newProps["ShowCoolHeatEquipmentStateUI"] = True
+
+            dev.replacePluginPropsOnServer(newProps)
+
+        return
+
+    ########################################
+    # callback for state list changes, called from stateListOrDisplayStateIdChanged()
+    ########################################
+
+    def getDeviceStateList(self, device):
+
+        state_list = indigo.PluginBase.getDeviceStateList(self, device)
+        device_type = device.pluginProps.get("device_type", None)
+
+        if device_type == 'bondBridge':
+            state_list.append(self.getDeviceStateDictForStringType("fw_ver", "Firmware Version", "Firmware Version"))
+            state_list.append(self.getDeviceStateDictForStringType("fw_date", "Firmware Date", "Firmware Date"))
+            state_list.append(self.getDeviceStateDictForStringType("uptime_s", "Uptime", "Uptime"))
+            state_list.append(self.getDeviceStateDictForStringType("make", "Make", "Make"))
+            state_list.append(self.getDeviceStateDictForStringType("model", "Model", "Model"))
+            state_list.append(self.getDeviceStateDictForStringType("bondid", "Bond ID", "Bond ID"))
+            state_list.append(self.getDeviceStateDictForStringType("name", "Name", "Name"))
+            state_list.append(self.getDeviceStateDictForStringType("location", "Location", "Location"))
+
+        elif device_type == 'bondDevice':
+
+            if device.pluginProps.get("bond_type") == "FP":
+                flame_state = self.getDeviceStateDictForNumberType("flame", "Flame", "Flame")
+                state_list.append(flame_state)
+
+        return state_list
+
+        ########################################
+
     def deviceStartComm(self, device):
         self.logger.info(f"{device.name}: Starting {device.deviceTypeId} Device {device.id}")
 
@@ -92,10 +222,9 @@ class Plugin(indigo.PluginBase):
 
         if device.deviceTypeId == "bondBridge":
             try:
-                # using when creating the Bond device causes all operations to be very slow.
-                # So we'll use the IP address instead.
-                bridge = BondHome(socket.gethostbyname(device.pluginProps['address']),
-                                  device.pluginProps['token'])
+                # using hostname when creating the Bond device causes all operations to be very slow, so use the IP address
+                bridge = BondHome(socket.gethostbyname(device.pluginProps['address']), device.pluginProps['token'])
+
             except Exception as err:
                 self.logger.debug(f"{device.name}: BondHome __init__ error: {err}")
                 device.updateStateImageOnServer(indigo.kStateImageSel.SensorTripped)
@@ -224,20 +353,6 @@ class Plugin(indigo.PluginBase):
 
         else:
             self.logger.error(f"{device.name}: deviceStopComm: Unknown device type: {device.deviceTypeId}")
-
-    ########################################
-    # callback for state list changes, called from stateListOrDisplayStateIdChanged()
-    ########################################
-
-    def getDeviceStateList(self, device):
-        state_list = indigo.PluginBase.getDeviceStateList(self, device)
-
-        # add custom states as needed for bond device type
-        if device.pluginProps.get("bond_type", None) == "FP":
-            flame_state = self.getDeviceStateDictForNumberType("flame", "Flame", "Flame")
-            state_list.append(flame_state)
-
-        return state_list
 
     ########################################
     # Process callback from BondHome devices

@@ -1,6 +1,78 @@
 <?xml version="1.0"?>
 <Devices>
     <SupportURL>https://forums.indigodomo.com/viewforum.php?f=295</SupportURL>
+   <DeviceFactory>
+        <Name>Create Bond Device</Name>
+        <ButtonTitle>Create</ButtonTitle>
+        <ConfigUI>
+            <Field id="SupportsStatusRequest" type="checkbox" defaultValue="false" hidden="true" />
+			<Field id="bond_type" type="textfield" hidden="true" />
+
+        <!-- Factory Device Type Selection -->
+        ￼   <Field type="menu" id="deviceType" defaultValue="bondBridge">
+                <Label>Device Type:</Label>
+                <List>
+                    <Option value="bondBridge">Bond Bridge</Option>
+                    <Option value="bondDevice">Bond Device</Option>
+                </List>
+                <CallbackMethod>menuChanged</CallbackMethod>
+            </Field>
+             <Field id="separator1" type="separator"/>
+
+        <!-- Bond Bridge  -->
+            <Field id="found_list" type="menu" defaultValue="" visibleBindingId="deviceType" visibleBindingValue="bondBridge">
+                <Label>Discovered Bridges:</Label>
+                <List class="self" method="found_device_list" dynamicReload="true"/>
+                 <CallbackMethod>menuChanged</CallbackMethod>
+            </Field>
+            <Field id="ip_address" type="textfield"  defaultValue="" tooltip="Enter IP address or Hostname of Bond device."
+                   visibleBindingId="deviceType" visibleBindingValue="bondBridge">
+				<Label>IP Address or Hostname:</Label>
+                 <CallbackMethod>menuChanged</CallbackMethod>
+			</Field>
+			<Field id="token" type="textfield" defaultValue="" tooltip="Local Token" visibleBindingId="deviceType" visibleBindingValue="bondBridge">
+				<Label>Local Token:</Label>
+                 <CallbackMethod>menuChanged</CallbackMethod>
+			</Field>
+
+            <!-- Bond  Device -->
+
+            <Field id="bridge" type="menu" visibleBindingId="deviceType" visibleBindingValue="bondDevice" alwaysUseInDialogHeightCalc="true">
+                <Label>Bridge:</Label>
+                <List class="self" method="get_bridge_list" dynamicReload="true"/>
+                <CallbackMethod>menuChanged</CallbackMethod>
+            </Field>
+            <Field id="address" type="menu" visibleBindingId="deviceType" visibleBindingValue="bondDevice" alwaysUseInDialogHeightCalc="true">
+                <Label>Device:</Label>
+                <List class="self" method="get_device_list" dynamicReload="true"/>
+                <CallbackMethod>menuChanged</CallbackMethod>
+            </Field>
+             <Field id="on_command" type="menu" visibleBindingId="deviceType" visibleBindingValue="bondDevice" alwaysUseInDialogHeightCalc="true">
+                <Label>On Command:</Label>
+                <List class="self" method="get_action_list" dynamicReload="true"/>
+                <CallbackMethod>menuChanged</CallbackMethod>
+            </Field>
+             <Field id="on_parameter" type="textfield" visibleBindingId="deviceType" visibleBindingValue="bondDevice" alwaysUseInDialogHeightCalc="true">
+                <Label>On Parameter:</Label>
+            </Field>
+            <Field id="off_command" type="menu" visibleBindingId="deviceType" visibleBindingValue="bondDevice" alwaysUseInDialogHeightCalc="true">
+                <Label>Off Command:</Label>
+                <List class="self" method="get_action_list" dynamicReload="true"/>
+                <CallbackMethod>menuChanged</CallbackMethod>
+            </Field>
+            <Field id="off_parameter" type="textfield" visibleBindingId="deviceType" visibleBindingValue="bondDevice" alwaysUseInDialogHeightCalc="true">
+                <Label>Off Parameter:</Label>
+            </Field>
+			<Field id="argumentNote1" type="label" fontSize="small" fontColor="darkgray"
+                   visibleBindingId="deviceType" visibleBindingValue="bondDevice" alwaysUseInDialogHeightCalc="true">
+				<Label>Some device commands, such as 'SetSpeed' for ceiling fans, require a parameter.  Leave blank if not required.</Label>
+			</Field>
+			<Field id="argumentNote2" type="label" fontSize="small" fontColor="darkgray"
+                   visibleBindingId="deviceType" visibleBindingValue="bondDevice" alwaysUseInDialogHeightCalc="true">
+				<Label>Variable and Device State Substitution is enabled for this field. Use the format %%v:12345%% for variables and %%d:12345:someStateId%% for device states.</Label>
+			</Field>
+        </ConfigUI>
+    </DeviceFactory>
 
     <Device id="bondBridge" type="dimmer">
         <Name>Bond Bridge</Name>
@@ -63,7 +135,7 @@
         </States>
      </Device>
 
-    <Device id="bondDevice" type="relay">
+    <Device id="bondRelay" type="relay">
         <Name>Bond Device</Name>
         <ConfigUI>
 			<Field id="SupportsStatusRequest" type="checkbox" defaultValue="false" hidden="true" />
@@ -96,7 +168,50 @@
                 <Label>Off Parameter:</Label>
             </Field>
 			<Field id="argumentNote1" type="label" fontSize="small" fontColor="darkgray">
-				<Label>Some device commands, such as 'SetSpeed' for ceiling fans, require an parameter.  Leave blank if not required.</Label>
+				<Label>Some device commands, such as 'SetSpeed' for ceiling fans, require a parameter.  Leave blank if not required.</Label>
+			</Field>
+			<Field id="argumentNote2" type="label" fontSize="small" fontColor="darkgray">
+				<Label>Variable and Device State Substitution is enabled for this field. Use the format %%v:12345%% for variables and %%d:12345:someStateId%% for device states.</Label>
+			</Field>
+        </ConfigUI>
+        <States>
+        </States>
+    </Device>
+
+    <Device id="bondDimmer" type="dimmer">
+        <Name>Bond Device</Name>
+        <ConfigUI>
+			<Field id="SupportsStatusRequest" type="checkbox" defaultValue="false" hidden="true" />
+			<Field id="bond_type" type="textfield" hidden="true" />
+
+            <Field id="bridge" type="menu">
+                <Label>Bridge:</Label>
+                <List class="self" method="get_bridge_list" dynamicReload="true"/>
+                <CallbackMethod>menuChanged</CallbackMethod>
+            </Field>
+            <Field id="address" type="menu">
+                <Label>Device:</Label>
+                <List class="self" method="get_device_list" dynamicReload="true"/>
+                <CallbackMethod>menuChanged</CallbackMethod>
+            </Field>
+             <Field id="on_command" type="menu">
+                <Label>On Command:</Label>
+                <List class="self" method="get_action_list" dynamicReload="true"/>
+                <CallbackMethod>menuChanged</CallbackMethod>
+            </Field>
+             <Field id="on_parameter" type="textfield">
+                <Label>On Parameter:</Label>
+            </Field>
+            <Field id="off_command" type="menu">
+                <Label>Off Command:</Label>
+                <List class="self" method="get_action_list" dynamicReload="true"/>
+                <CallbackMethod>menuChanged</CallbackMethod>
+            </Field>
+            <Field id="off_parameter" type="textfield">
+                <Label>Off Parameter:</Label>
+            </Field>
+			<Field id="argumentNote1" type="label" fontSize="small" fontColor="darkgray">
+				<Label>Some device commands, such as 'SetSpeed' for ceiling fans, require a parameter.  Leave blank if not required.</Label>
 			</Field>
 			<Field id="argumentNote2" type="label" fontSize="small" fontColor="darkgray">
 				<Label>Variable and Device State Substitution is enabled for this field. Use the format %%v:12345%% for variables and %%d:12345:someStateId%% for device states.</Label>
