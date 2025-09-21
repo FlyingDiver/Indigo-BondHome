@@ -28,11 +28,9 @@
             <Field id="ip_address" type="textfield"  defaultValue="" tooltip="Enter IP address or Hostname of Bond device."
                    visibleBindingId="deviceType" visibleBindingValue="bondBridge">
 				<Label>IP Address or Hostname:</Label>
-                 <CallbackMethod>menuChanged</CallbackMethod>
 			</Field>
 			<Field id="token" type="textfield" defaultValue="" tooltip="Local Token" visibleBindingId="deviceType" visibleBindingValue="bondBridge">
 				<Label>Local Token:</Label>
-                 <CallbackMethod>menuChanged</CallbackMethod>
 			</Field>
 
             <!-- Bond  Device -->
@@ -50,7 +48,6 @@
              <Field id="on_command" type="menu" visibleBindingId="deviceType" visibleBindingValue="bondDevice" alwaysUseInDialogHeightCalc="true">
                 <Label>On Command:</Label>
                 <List class="self" method="get_action_list" dynamicReload="true"/>
-                <CallbackMethod>menuChanged</CallbackMethod>
             </Field>
              <Field id="on_parameter" type="textfield" visibleBindingId="deviceType" visibleBindingValue="bondDevice" alwaysUseInDialogHeightCalc="true">
                 <Label>On Parameter:</Label>
@@ -58,7 +55,6 @@
             <Field id="off_command" type="menu" visibleBindingId="deviceType" visibleBindingValue="bondDevice" alwaysUseInDialogHeightCalc="true">
                 <Label>Off Command:</Label>
                 <List class="self" method="get_action_list" dynamicReload="true"/>
-                <CallbackMethod>menuChanged</CallbackMethod>
             </Field>
             <Field id="off_parameter" type="textfield" visibleBindingId="deviceType" visibleBindingValue="bondDevice" alwaysUseInDialogHeightCalc="true">
                 <Label>Off Parameter:</Label>
@@ -85,7 +81,6 @@
             </Field>
             <Field id="address" type="textfield"  defaultValue="" tooltip="Enter IP address or Hostname of Bond device.">
 				<Label>IP Address or Hostname:</Label>
-                 <CallbackMethod>menuChanged</CallbackMethod>
 			</Field>
 			<Field id="token" type="textfield" defaultValue="" tooltip="Local Token">
 				<Label>Local Token:</Label>
@@ -149,12 +144,10 @@
             <Field id="address" type="menu">
                 <Label>Device:</Label>
                 <List class="self" method="get_device_list" dynamicReload="true"/>
-                <CallbackMethod>menuChanged</CallbackMethod>
             </Field>
              <Field id="on_command" type="menu">
                 <Label>On Command:</Label>
                 <List class="self" method="get_action_list" dynamicReload="true"/>
-                <CallbackMethod>menuChanged</CallbackMethod>
             </Field>
              <Field id="on_parameter" type="textfield">
                 <Label>On Parameter:</Label>
@@ -162,7 +155,6 @@
             <Field id="off_command" type="menu">
                 <Label>Off Command:</Label>
                 <List class="self" method="get_action_list" dynamicReload="true"/>
-                <CallbackMethod>menuChanged</CallbackMethod>
             </Field>
             <Field id="off_parameter" type="textfield">
                 <Label>Off Parameter:</Label>
@@ -192,12 +184,10 @@
             <Field id="address" type="menu">
                 <Label>Device:</Label>
                 <List class="self" method="get_device_list" dynamicReload="true"/>
-                <CallbackMethod>menuChanged</CallbackMethod>
             </Field>
              <Field id="on_command" type="menu">
                 <Label>On Command:</Label>
                 <List class="self" method="get_action_list" dynamicReload="true"/>
-                <CallbackMethod>menuChanged</CallbackMethod>
             </Field>
              <Field id="on_parameter" type="textfield">
                 <Label>On Parameter:</Label>
@@ -205,7 +195,6 @@
             <Field id="off_command" type="menu">
                 <Label>Off Command:</Label>
                 <List class="self" method="get_action_list" dynamicReload="true"/>
-                <CallbackMethod>menuChanged</CallbackMethod>
             </Field>
             <Field id="off_parameter" type="textfield">
                 <Label>Off Parameter:</Label>
