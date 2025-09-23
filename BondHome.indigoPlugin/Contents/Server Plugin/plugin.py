@@ -1,6 +1,5 @@
 #! /usr/bin/env python
 # -*- coding: utf-8 -*-
-from ipaddress import ip_address
 
 import indigo  # noqa
 import time
@@ -11,15 +10,114 @@ import socket
 from bondhome import BondHome
 from zeroconf import IPVersion, ServiceBrowser, ServiceStateChange, Zeroconf
 
-bond_device_types = {
-    'CF': "Ceiling Fan",
-    'FP': "Fireplace",
-    'MS': "Motorized Shades",
-    'LT': "Light",
-    'BD': "Bidet",
-    'GX': "Generic Device",
-    'UN': "Unknown Device"
+"""Bond type enumeration."""
+import re
+from enum import Enum
+
+regexes = {
+    "bridge_snowbird": r"^[A-C]\w*$",
+    "bridge_zermatt": r"^Z(Z|X)\w*$",
+    "bridge_pro": r"^ZP\w*$",
+    "sbb_lights": r"^T\w*$",
+    "sbb_ceiling_fan": r"^K\w*$",
+    "sbb_plug": r"^P\w*$",
 }
+
+
+class BondType(Enum):
+    """Bond type enumeration."""
+
+    BRIDGE_SNOWBIRD = "bridge_snowbird"
+    BRIDGE_ZERMATT = "bridge_zermatt"
+    BRIDGE_PRO = "bridge_pro"
+    SBB_LIGHTS = "sbb_lights"
+    SBB_CEILING_FAN = "sbb_ceiling_fan"
+    SBB_PLUG = "sbb_plug"
+
+    def is_sbb(self) -> bool:
+        """Checks if BondType is a Smart by Bond product."""
+        return self.value.startswith("sbb_")
+
+    def is_bridge(self) -> bool:
+        """Checks if BondType is a Bond Bridge/Bond Bridge Pro."""
+        return self.value.startswith("bridge_")
+
+    @classmethod
+    def from_serial(cls, serial: str):
+        """Returns a BondType for a serial number"""
+        for (bond_type, regex) in regexes.items():
+            if re.search(regex, serial):
+                return cls(bond_type)
+        return None
+
+    @staticmethod
+    def is_sbb_from_serial(serial: str) -> bool:
+        """Checks if specified Bond serial number is a Smart by Bond product."""
+        bond_type = BondType.from_serial(serial)
+        if bond_type:
+            return bond_type.is_sbb()
+        return False
+
+    @staticmethod
+    def is_bridge_from_serial(serial: str) -> bool:
+        """Checks if specified Bond serial number is a Bond Bridge."""
+        bond_type = BondType.from_serial(serial)
+        if bond_type:
+            return bond_type.is_bridge()
+        return False
+
+
+class DeviceType(Enum):
+    """Bond Device type enumeration."""
+
+    CEILING_FAN = "CF"
+    MOTORIZED_SHADES = "MS"
+    FIREPLACE = "FP"
+    AIR_CONDITIONER = "AC"
+    GARAGE_DOOR = "GD"
+    BIDET = "BD"
+    LIGHT = "LT"
+    GENERIC_DEVICE = "GX"
+
+    @staticmethod
+    def is_fan(device_type: str) -> bool:
+        """Checks if specified device type is a fan."""
+        return device_type == DeviceType.CEILING_FAN
+
+    @staticmethod
+    def is_shades(device_type: str) -> bool:
+        """Checks if specified device type is shades."""
+        return device_type == DeviceType.MOTORIZED_SHADES
+
+    @staticmethod
+    def is_fireplace(device_type: str) -> bool:
+        """Checks if specified device type is fireplace."""
+        return device_type == DeviceType.FIREPLACE
+
+    @staticmethod
+    def is_air_conditioner(device_type: str) -> bool:
+        """Checks if specified device type is air conditioner."""
+        return device_type == DeviceType.AIR_CONDITIONER
+
+    @staticmethod
+    def is_garage_door(device_type: str) -> bool:
+        """Checks if specified device type is garage door."""
+        return device_type == DeviceType.GARAGE_DOOR
+
+    @staticmethod
+    def is_bidet(device_type: str) -> bool:
+        """Checks if specified device type is bidet."""
+        return device_type == DeviceType.BIDET
+
+    @staticmethod
+    def is_light(device_type: str) -> bool:
+        """Checks if specified device type is light."""
+        return device_type == DeviceType.LIGHT
+
+    @staticmethod
+    def is_generic(device_type: str) -> bool:
+        """Checks if specified device type is generic."""
+        return device_type == DeviceType.GENERIC_DEVICE
 
 
 ################################################################################
@@ -41,26 +139,26 @@ class Plugin(indigo.PluginBase):
         self.known_devices = {}         # nested dict of client devices, keyed by BondID then device_ID, value is dict returned by get_device()
 
     def startup(self):
-        self.logger.info("Starting Bond Bridge")
+        self.logger.info("Starting Bond Home plugin")
         zeroconf = Zeroconf(ip_version=IPVersion.V4Only)
         services = ["_bond._tcp.local."]
         browser = ServiceBrowser(zeroconf, services, handlers=[self.on_service_state_change])
 
     def on_service_state_change(self, zeroconf: Zeroconf, service_type: str, name: str, state_change: ServiceStateChange) -> None:
         self.logger.debug(f"Service {name} of type {service_type} state changed: {state_change}")
-        info = zeroconf.get_service_info(service_type, name)
-        self.logger.debug(f"Service info: {info}")
         if state_change in [ServiceStateChange.Added, ServiceStateChange.Updated]:
             if service_type == "_bond._tcp.local." and name not in self.found_devices:
-                ipaddr = ".".join([f"{x}" for x in info.addresses[0]])  # address as string (xx.xx.xx.xx)
+                info = zeroconf.get_service_info(service_type, name)
+                ip_address = ".".join([f"{x}" for x in info.addresses[0]])  # address as string (xx.xx.xx.xx)
                 try:
-                    bridge = BondHome(ipaddr, "")
-                    bridge_version = bridge.get_bridge_version()
+                    bridge = BondHome(ip_address)
+                    bridge_version_info = bridge.get_bridge_version()
                     del bridge
                 except Exception as err:
-                    self.logger.debug(f"Error creating BondHome object for {name}: {err}")
+                    self.logger.debug(f"on_service_state_change: Error creating BondHome object for {name}: {err}")
                     return
-                self.found_devices[name] = {"hostname": info.server, "ip_address": ipaddr, "make": bridge_version['make'], "model": bridge_version['model'], "bondid": bridge_version['bondid']}
+                self.logger.debug(f"Device {info.server}: version info: {bridge_version_info}")
+                self.found_devices[info.server] = bridge_version_info
 
         elif state_change is ServiceStateChange.Removed:
             if service_type == "_bond._tcp.local." and name in self.found_devices:
@@ -70,7 +168,19 @@ class Plugin(indigo.PluginBase):
 
         ########################################
 
-    def closedPrefsConfigUi(self, valuesDict, userCancelled):
+    def validate_prefs_config_ui(self, valuesDict):
+        self.logger.debug(f"validate_prefs_config_ui: valuesDict = {valuesDict}")
+        errorsDict = indigo.Dict()
+        valid = True
+
+        logLevel = int(valuesDict.get("logLevel", logging.INFO))
+        if logLevel < logging.DEBUG or logLevel > logging.CRITICAL:
+            errorsDict["logLevel"] = "Log Level must be between 10 (DEBUG) and 50 (CRITICAL)"
+            valid = False
+
+        return valid, valuesDict, errorsDict
+
+    def closed_prefs_config_ui(self, valuesDict, userCancelled):
         if not userCancelled:
             self.logLevel = int(valuesDict.get("logLevel", logging.INFO))
             self.indigo_log_handler.setLevel(self.logLevel)
@@ -78,110 +188,164 @@ class Plugin(indigo.PluginBase):
 
         ########################################
 
-    def getDeviceConfigUiValues(self, pluginProps, typeId, devId):
-        self.logger.debug(f"getDeviceConfigUiValues, typeId = {typeId}, devId = {devId}, pluginProps = {pluginProps}")
-        valuesDict = pluginProps
-        errorMsgDict = indigo.Dict()
+    def get_device_factory_ui_values(self, dev_id_list):
+        self.logger.debug(f"get_device_factory_ui_values")
 
-        # Preload the first bridge for any non-bridge device, if not already specified
-        if typeId == 'bondDevice' and not valuesDict.get('bridge', None) and len(self.bond_bridges):
-            valuesDict['bridge'] = list(self.bond_bridges.keys())[0]
-        return valuesDict, errorMsgDict
+        values_dict = indigo.Dict()
+        error_msg_dict = indigo.Dict()
 
-        ########################################
-
-    def getDeviceFactoryUiValues(self, devIdList):
-        self.logger.debug(f"getDeviceFactoryUiValues: devIdList = {devIdList}")
-
-        valuesDict = indigo.Dict()
-        errorMsgDict = indigo.Dict()
+        values_dict['found_bridge_list'] = self.get_found_bridge_list()
 
         # change default to creating devices if there's at least one bridge defined
 
-        if len(self.bond_bridges) > 0:
-            valuesDict["deviceType"] = "bondDevice"
-            valuesDict["bridge"] = self.bond_bridges[list(self.bond_bridges.keys())[0]].devID
+        # if len(self.bond_bridges):
+        #     values_dict["plugin_device_type"] = "bondDevice"
+        #     values_dict['bridge'] = list(self.bond_bridges.keys())[0]
 
-        return valuesDict, errorMsgDict
+        self.logger.debug(f"get_device_factory_ui_values: {dict(values_dict)=}")
+        return values_dict, error_msg_dict
 
-    def validateDeviceFactoryUi(self, valuesDict, devIdList):
-        self.logger.threaddebug(f"validateDeviceFactoryUi: valuesDict = {valuesDict}, devIdList = {devIdList}")
-        errorsDict = indigo.Dict()
+    def validate_device_factory_ui(self, values_dict, dev_id_list):
+        self.logger.threaddebug(f"validate_device_factory_ui: dev_id_list = {dev_id_list}, values_dict = {values_dict}")
+        errors_dict = indigo.Dict()
         valid = True
 
-        if valuesDict["deviceType"] == "bondBridge":
-            if valuesDict["ip_address"] == "":
-                errorsDict["bridge"] = "No Bond Bridge Specified"
-                self.logger.warning("validateDeviceFactoryUi - No Bond Bridge Specified")
+        if values_dict["plugin_device_type"] in ["bondBridge", "bondSmart"]:
+            if values_dict["address"] == "":
+                errors_dict["bridge"] = "Device Hostname or IP Address Required"
+                self.logger.warning("validate_device_factory_ui - Device Hostname or IP Address Required")
+                valid = False
+            if values_dict["token"] == "":
+                errors_dict["token"] = "Device Token Required"
+                self.logger.warning("validate_device_factory_ui - Device Token Required")
                 valid = False
 
-        elif valuesDict["deviceType"] == "bondRelay":
-            if valuesDict["account"] == 0:
-                errorsDict["account"] = "No Ecobee Account Specified"
-                self.logger.warning("validateDeviceFactoryUi - No Ecobee Account Specified")
-                valid = False
+        # add more validation as needed
 
-            if len(valuesDict["address"]) == 0:
-                errorsDict["address"] = "No Sensor Specified"
-                self.logger.warning("validateDeviceFactoryUi - No Sensor Specified")
-                valid = False
+        self.logger.threaddebug(f"validate_device_factory_ui complete, returning {valid}, values_dict = {values_dict}, errors_dict = {errors_dict}")
+        return valid, values_dict, errors_dict
 
-        elif valuesDict["deviceType"] == "bondDimmer":
-            if valuesDict["account"] == 0:
-                errorsDict["account"] = "No Ecobee Account Specified"
-                self.logger.warning("validateDeviceFactoryUi - No Ecobee Account Specified")
-                valid = False
+    def closed_device_factory_ui(self, values_dict, user_cancelled, dev_id_list):
 
-            if len(valuesDict["address"]) == 0:
-                errorsDict["address"] = "No Sensor Specified"
-                self.logger.warning("validateDeviceFactoryUi - No Sensor Specified")
-                valid = False
-
-        return valid, valuesDict, errorsDict
-
-    def closedDeviceFactoryUi(self, valuesDict, userCancelled, devIdList):
-
-        if userCancelled:
-            self.logger.debug("closedDeviceFactoryUi: user cancelled")
+        if user_cancelled:
+            self.logger.debug("closed_device_factory_ui: user cancelled")
             return
 
-        self.logger.debug(f"closedDeviceFactoryUi: valuesDict =\n{valuesDict}\ndevIdList =\n{devIdList}")
+        self.logger.debug(f"closed_device_factory_ui: values_dict = {values_dict}, dev_id_list = {dev_id_list}")
 
-        if valuesDict["deviceType"] == "bondBridge":
+        if values_dict["plugin_device_type"] == "bondBridge":
 
-            address = valuesDict["ip_address"]
+            try:
+                bridge = BondHome(values_dict['address'], values_dict['token'])
+                bridge_version = bridge.get_bridge_version()
+                bridge_info = bridge.get_bridge_info()
+                del bridge
+            except Exception as err:
+                self.logger.error(f"Error creating BondHome object for {values_dict['address']}: {err}")
+                return
 
-            dev = indigo.device.create(indigo.kProtocol.Plugin, address=address, deviceTypeId="bondBridge")
-            dev.model = "Bond Bridge"
-            dev.name = f"Bond Bridge ({dev.id})"
+            self.logger.debug(f"bridge_version = {bridge_version}")
+            self.logger.debug(f"bridge_info = {bridge_info}")
+
+            if not BondType.is_bridge_from_serial(bridge_version['bondid']):
+                self.logger.error(f"Unknown Bond device type for serial number {bridge_version['bondid']}")
+                return
+
+            stateList = [
+                {'key': 'fw_ver', 'value': bridge_version.get('fw_ver')},
+                {'key': 'fw_date', 'value': bridge_version.get('fw_date')},
+                {'key': 'uptime_s', 'value': bridge_version.get('uptime_s')},
+                {'key': 'make', 'value': bridge_version.get('make')},
+                {'key': 'model', 'value': bridge_version.get('model')},
+                {'key': 'bondid', 'value': bridge_version.get('bondid')},
+                {'key': 'name', 'value': bridge_info.get('name')},
+                {'key': 'location', 'value': bridge_info.get('location')},
+                {'key': 'brightnessLevel', 'value': bridge_info.get('bluelight')},
+            ]
+
+            dev = indigo.device.create(indigo.kProtocol.Plugin, address=values_dict['address'], deviceTypeId="bondBridge")
+            dev.name = f"{bridge_info.get('name')} ({dev.id})"
+            dev.model = f"{bridge_version.get('model')}"
             dev.replaceOnServer()
-
-            self.logger.info(f"Created Bond Bridge '{dev.name}'")
-
-        elif valuesDict["deviceType"] == "bondRelay":
-
-            address = valuesDict["address"]
-
-            ecobee = self.ecobee_accounts[int(valuesDict["account"])]
-            thermostat = ecobee.thermostats.get(address)
-            name = f"Ecobee {thermostat.get('name')}"
-            device_type = thermostat.get('modelNumber', 'Unknown')
-
-            dev = indigo.device.create(indigo.kProtocol.Plugin, address=address, name=name, deviceTypeId="EcobeeThermostat")
-            dev.model = "Ecobee Thermostat"
-            dev.subModel = ECOBEE_MODELS.get(device_type, 'Unknown')
-            dev.replaceOnServer()
-
-            self.logger.info(f"Created EcobeeThermostat device '{dev.name}'")
 
             newProps = dev.pluginProps
-            newProps["account"] = valuesDict["account"]
-            newProps["holdType"] = valuesDict["holdType"]
-            newProps["device_type"] = device_type
-            newProps["NumHumidityInputs"] = 1
-            newProps["ShowCoolHeatEquipmentStateUI"] = True
-
+            newProps['bondid'] = bridge_version['bondid']
+            newProps['token'] = values_dict['token']
             dev.replacePluginPropsOnServer(newProps)
+
+            self.logger.info(f"Created Bond Bridge Device '{dev.name}'")
+
+        if values_dict["plugin_device_type"] == "bondSmart":
+
+            try:
+                bridge = BondHome(values_dict['address'], values_dict['token'])
+                bridge_version = bridge.get_bridge_version()
+                sbb_device_info = bridge.get_device('1')
+                del bridge
+            except Exception as err:
+                self.logger.error(f"Error creating BondHome object for {values_dict['address']}: {err}")
+                return
+
+            self.logger.debug(f"bridge_version = {bridge_version}")
+            self.logger.debug(f"sbb_device_info = {sbb_device_info}")
+
+            if not BondType.is_sbb_from_serial(bridge_version['bondid']):
+                self.logger.error(f"Unknown Smart by Bond device type for serial number {bridge_version['bondid']}")
+                return
+
+            stateList = [
+                {'key': 'fw_ver', 'value': bridge_version['fw_ver']},
+                {'key': 'fw_date', 'value': bridge_version['fw_date']},
+                {'key': 'uptime_s', 'value': bridge_version['uptime_s']},
+                {'key': 'make', 'value': bridge_version['make']},
+                {'key': 'model', 'value': bridge_version['model']},
+                {'key': 'bondid', 'value': bridge_version['bondid']},
+                {'key': 'name', 'value': sbb_device_info.get('name')},
+                {'key': 'location', 'value': sbb_device_info.get('location')},
+            ]
+
+            # Figure out what SBB device type this is, so the Indigo device can be created with the correct deviceTypeId
+            if sbb_device_info.get('type') == 'CF':   # ceiling fan
+                deviceTypeId = "sbbFan"
+            elif sbb_device_info.get('type') == 'LT':   # light
+                deviceTypeId = "sbbLight"
+            elif sbb_device_info.get('type') == 'MS':   # plug
+                deviceTypeId = "sbbShades"
+            elif sbb_device_info.get('type') in ['AC', 'FP', 'GD', 'BD', 'GX']:
+                deviceTypeId = "sbbGeneric"
+            else:
+                self.logger.error(f"Unknown Smart by Bond device type for device type {sbb_device_info.get('type')}")
+                return
+
+            dev = indigo.device.create(indigo.kProtocol.Plugin, address=values_dict['address'], deviceTypeId=deviceTypeId)
+            dev.name = f"{sbb_device_info.get('name')} ({dev.id})"
+            dev.model = f"{bridge_version.get('model')}"
+            dev.replaceOnServer()
+
+            newProps = dev.pluginProps
+            newProps['bondid'] = bridge_version['bondid']
+            newProps['token'] = values_dict['token']
+            dev.replacePluginPropsOnServer(newProps)
+
+            dev.updateStatesOnServer(stateList)
+
+            self.logger.info(f"Created Smart by Bond Device '{dev.name}'")
+
+            # create the grouped device for the Smart by Bond devices
+            self.logger.debug(f"Creating grouped device for Smart by Bond devices")
+            if 'TurnLightOn' in sbb_device_info.get('actions', []):
+                dev = indigo.device.create(indigo.kProtocol.Plugin, address=values_dict['address'], deviceTypeId="dimmer")
+                dev.name = f"{sbb_device_info.get('name')} - Light ({dev.id})"
+                dev.replaceOnServer()
+
+                newProps = dev.pluginProps
+                newProps['bondid'] = bridge_version['bondid']
+                dev.replacePluginPropsOnServer(newProps)
+                self.logger.info(f"Created Smart by Bond Light Device '{dev.name}'")
+
+        elif values_dict["plugin_device_type"] == "bondDevice":
+
+            dev = indigo.device.create(indigo.kProtocol.Plugin, address=values_dict['bond_device_id'], deviceTypeId="bondDevice")
 
         return
 
@@ -247,20 +411,18 @@ class Plugin(indigo.PluginBase):
             ]
             device.updateStatesOnServer(stateList)
 
-            # Smart by Bond devices don't implement get_bridge_info(), so skip this if not an actual Bond device
-            if version['make'] == 'Olibra':
-                try:
-                    info = bridge.get_bridge_info()
-                except Exception as err:
-                    self.logger.debug(f"{device.name}: Error in get_bridge_info(): {err}")
-                else:
-                    self.logger.debug(f"{device.name}: Bond info: {info}")
-                    stateList = [
-                        {'key': 'name', 'value': info['name']},
-                        {'key': 'location', 'value': info['location']},
-                        {'key': 'brightnessLevel', 'value': info['bluelight']}
-                    ]
-                    device.updateStatesOnServer(stateList)
+            try:
+                info = bridge.get_bridge_info()
+            except Exception as err:
+                self.logger.debug(f"{device.name}: Error in get_bridge_info(): {err}")
+            else:
+                self.logger.debug(f"{device.name}: Bond info: {info}")
+                stateList = [
+                    {'key': 'name', 'value': info['name']},
+                    {'key': 'location', 'value': info['location']},
+                    {'key': 'brightnessLevel', 'value': info['bluelight']}
+                ]
+                device.updateStatesOnServer(stateList)
 
             bondID = version['bondid']
             self.bond_bridges[bondID] = bridge
@@ -270,6 +432,39 @@ class Plugin(indigo.PluginBase):
             for bond_dev in bridge.get_device_list():
                 self.known_devices[bondID][bond_dev] = bridge.get_device(bond_dev)
             self.logger.debug(f"{device.name}: known_devices:\n{self.known_devices}")
+
+            # start up the BPUP socket connection
+            bridge.udp_start(self.receiveBPUP)
+
+        elif device.deviceTypeId in ["sbbFan"]:
+            try:
+                # using hostname when creating the Bond device causes all operations to be very slow, so use the IP address
+                bridge = BondHome(socket.gethostbyname(device.pluginProps['address']), device.pluginProps['token'])
+
+            except Exception as err:
+                self.logger.debug(f"{device.name}: BondHome __init__ error: {err}")
+                device.updateStateImageOnServer(indigo.kStateImageSel.SensorTripped)
+                return
+
+            try:
+                version = bridge.get_bridge_version()
+            except Exception as err:
+                self.logger.debug(f"{device.name}: Error in get_bridge_version(): {err}")
+                return
+
+            self.logger.debug(f"{device.name}: Smart by Bond version: {version}")
+            stateList = [
+                {'key': 'fw_ver', 'value': version['fw_ver']},
+                {'key': 'fw_date', 'value': version['fw_date']},
+                {'key': 'uptime_s', 'value': version['uptime_s']},
+                {'key': 'make', 'value': version['make']},
+                {'key': 'model', 'value': version['model']},
+                {'key': 'bondid', 'value': version['bondid']},
+            ]
+            device.updateStatesOnServer(stateList)
+
+            bondID = version['bondid']
+            self.bond_bridges[bondID] = bridge
 
             # start up the BPUP socket connection
             bridge.udp_start(self.receiveBPUP)
@@ -288,7 +483,7 @@ class Plugin(indigo.PluginBase):
     # Undocumented API - runs after all devices have been started.  Actually, it's the super._postStartup() call that starts the devices.
     def _postStartup(self):
         super(Plugin, self)._postStartup()  # noqa
-        self.logger.debug(f"_postStartup: starting deferred devices: {self.deferred_start}")
+        self.logger.threaddebug(f"_postStartup: starting deferred devices: {self.deferred_start}")
         for device_id in self.deferred_start.values():
             self.do_device_startup(indigo.devices[device_id])
 
@@ -343,7 +538,7 @@ class Plugin(indigo.PluginBase):
                 self.bond_bridges[bondID].udp_stop()
                 del self.bond_bridges[bondID]
 
-        elif device.deviceTypeId == "smartBond":
+        elif device.deviceTypeId in ["sbbFan"]:
             bondID = device.states['bondid']
             if bondID in self.bond_bridges:
                 del self.bond_bridges[bondID]
@@ -408,73 +603,84 @@ class Plugin(indigo.PluginBase):
     #
     ########################################
 
-    def found_device_list(self, filter=None, valuesDict=None, typeId=0, targetId=0):
-        self.logger.debug(f"found_device_list: filter = {filter}, typeId = {typeId}, targetId = {targetId}, valuesDict = {valuesDict}")
-        retList = [("Enter Manual IP address", "Discovered Devices:")]
-        if typeId == "bondBridge":
-            for name, data in self.found_devices.items():
-                retList.append((data['hostname'], f"{data['make']} {data['model']} ({data['bondid']} @ {data['ip_address']})"))
-        self.logger.debug(f"found_device_list: retList = {retList}")
-        return retList
+    # This creates the list of zeroconf discovered Bond Bridges (or Smart by Bond devices).
+    # Should filter out ones that have already been defined. (Not implemented yet.)
+    # Initial entry is for manual entry of IP address.
 
-    def menuChanged(self, valuesDict, typeId, devId):
-        self.logger.debug(f"menuChanged: typeId = {typeId}, devId = {devId}, valuesDict = {valuesDict}")
-        if typeId == "bondBridge" or typeId == "smartBond":
-            valuesDict['address'] = valuesDict['found_list']
-        return valuesDict
+    def get_found_bridge_list(self, filter=None, values_dict=None, type_id=0, target_id=0):
+        self.logger.debug(f"get_found_bridge_list: filter = {filter}, type_id = {type_id}, target_id = {target_id}, values_dict = {values_dict}")
 
-    @staticmethod
-    def get_bridge_list(filter="", valuesDict=None, typeId="", targetId=0):
-        retList = []
-        for dev in indigo.devices.iter("self.bondBridge"):
-            retList.append((dev.states['bondid'], dev.name))
-        retList.sort(key=lambda tup: tup[1])
-        return retList
+        ret_list = []
+        for name, data in self.found_devices.items():
+            ret_list.append((name, f"{data.get('make')} {data.get('model')} ({data.get('bondid')})"))
 
-    def get_device_list(self, filter="", valuesDict=None, typeId="", targetId=0):
-        retList = []
-        bondid = valuesDict.get("bridge", None)
-        if not bondid:
-            return retList
-        for dev_key, dev_info in self.known_devices[bondid].items():
-            retList.append((dev_key, dev_info["name"]))
-        retList.sort(key=lambda tup: tup[1])
-        return retList
+        self.logger.debug(f"get_found_bridge_list: {ret_list=}")
+        return ret_list
 
-    def get_action_list(self, filter="", valuesDict=None, typeId="", targetId=0):
-        retList = []
-        bondid = valuesDict.get("bridge", None)
-        if not bondid:
-            return retList
-        if targetId:
+    def menuChanged(self, values_dict, type_id, dev_id):
+        self.logger.debug(f"menuChanged: type_id = {type_id}, dev_id = {dev_id}, values_dict = {values_dict}")
+        # if values_dict.get('plugin_device_type') == "bondBridge" or values_dict.get('plugin_device_type') == "smartBond":
+        #     values_dict['address'] = values_dict['found_bridge_list']
+        self.logger.debug(f"menuChanged: values_dict = {values_dict}")
+        return values_dict
+
+    def get_bridge_list(self, filter="", values_dict=None, type_id="", target_id=0):
+        self.logger.debug(f"get_bridge_list: target_id = {target_id}, target_id = {target_id}, values_dict = {values_dict}")
+        ret_list = []
+        for device in indigo.devices.iter("self.bondBridge"):
+            ret_list.append((device.states['bondid'], device.name))
+        ret_list.sort(key=lambda tup: tup[1])
+        self.logger.debug(f"get_bridge_list: {ret_list=}")
+        return ret_list
+
+    def get_device_list(self, filter="", values_dict=None, type_id="", target_id=0):
+        self.logger.debug(f"get_device_list: target_id = {target_id}, type_id = {type_id}, values_dict = {values_dict}")
+        ret_list = []
+        bind_id = values_dict.get("bridge", None)
+        if not bind_id:
+            return ret_list
+        for dev_key, dev_info in self.known_devices[bind_id].items():
+            ret_list.append((dev_key, dev_info["name"]))
+        ret_list.sort(key=lambda tup: tup[1])
+        self.logger.debug(f"get_device_list: {ret_list=}")
+        return ret_list
+
+    def get_action_list(self, filter="", values_dict=None, type_id="", target_id=0):
+        self.logger.debug(f"get_action_list: target_id = {target_id}, type_id = {type_id}, values_dict = {values_dict}")
+        ret_list = []
+        bond_id = values_dict.get("bridge", None)
+        if not bond_id:
+            return ret_list
+        if target_id:
             try:
-                address = indigo.devices[targetId].address
+                address = indigo.devices[target_id].address
             except (Exception,):
                 address = None
             if not address:
-                address = valuesDict.get("address", None)
-        elif valuesDict.get("device", None):
-            address = valuesDict.get('device', None)
+                address = values_dict.get("address", None)
+        elif values_dict.get("device", None):
+            address = values_dict.get('device', None)
         else:
             address = None
         if not address:
-            return retList
+            return ret_list
         try:
-            dev_info = self.known_devices[bondid][address]
+            dev_info = self.known_devices[bond_id][address]
         except (Exception,):
-            return retList
+            return ret_list
 
         for cmd in dev_info['actions']:
-            retList.append((cmd, cmd))
-        return retList
+            ret_list.append((cmd, cmd))
+        self.logger.debug(f"get_action_list: {ret_list=}")
+        return ret_list
 
     ########################################
     # Relay Action callback
     ########################################
-    def actionControlDevice(self, pluginAction, device):
-        self.logger.debug(f"{device.name}: actionControlDevice pluginAction:{pluginAction}")
+    def action_control_device(self, plugin_action, device):
+        self.logger.debug(f"{device.name}: action_control_device pluginAction:{plugin_action}")
 
-        if pluginAction.deviceAction == indigo.kDeviceAction.TurnOn:
+        if plugin_action.deviceAction == indigo.kDeviceAction.TurnOn:
             if device.deviceTypeId == "bondBridge" and device.states['make'] == 'Olibra':
                 bondID = device.states['bondid']
                 self.bond_bridges[bondID].set_bridge_info({"bluelight": 255})
@@ -491,9 +697,9 @@ class Plugin(indigo.PluginBase):
                     payload = {}
                 bridge.device_action(device.address, device.pluginProps["on_command"], payload)
             else:
-                self.logger.warning(f"actionControlDevice: Device type {device.deviceTypeId} does not support On command")
+                self.logger.warning(f"action_control_device: Device type {device.deviceTypeId} does not support On command")
 
-        elif pluginAction.deviceAction == indigo.kDeviceAction.TurnOff:
+        elif plugin_action.deviceAction == indigo.kDeviceAction.TurnOff:
             if device.deviceTypeId == "bondBridge" and device.states['make'] == 'Olibra':
                 bondID = device.states['bondid']
                 self.bond_bridges[bondID].set_bridge_info({"bluelight": 0})
@@ -510,9 +716,9 @@ class Plugin(indigo.PluginBase):
                     payload = {}
                 bridge.device_action(device.address, device.pluginProps["off_command"], payload)
             else:
-                self.logger.warning(f"actionControlDevice: Device type {device.deviceTypeId} does not support Off command")
+                self.logger.warning(f"action_control_device: Device type {device.deviceTypeId} does not support Off command")
 
-        elif pluginAction.deviceAction == indigo.kDeviceAction.Toggle:
+        elif plugin_action.deviceAction == indigo.kDeviceAction.Toggle:
             if device.deviceTypeId == "bondBridge" and device.states['make'] == 'Olibra':
                 bondID = device.states['bondid']
                 self.bond_bridges[bondID].set_bridge_info({"bluelight": 0})
@@ -529,18 +735,18 @@ class Plugin(indigo.PluginBase):
                     payload = {}
                 bridge.device_action(device.address, device.pluginProps["off_command"], payload)
             else:
-                self.logger.warning(f"actionControlDevice: Device type {device.deviceTypeId} does not support Toggle command")
+                self.logger.warning(f"action_control_device: Device type {device.deviceTypeId} does not support Toggle command")
 
-        elif pluginAction.deviceAction == indigo.kDeviceAction.SetBrightness:
+        elif plugin_action.deviceAction == indigo.kDeviceAction.SetBrightness:
             if device.deviceTypeId == "bondBridge" and device.states['make'] == 'Olibra':
                 level = int(action.actionValue * 2.55)  # bluelight scale is 0-255
                 bondID = device.states['bondid']
                 self.bond_bridges[bondID].set_bridge_info({"bluelight": level})
                 device.updateStateOnServer(key='brightnessLevel', value=action.actionValue)
             else:
-                self.logger.warning(f"actionControlDevice: Device type {device.deviceTypeId} does not support SetBrightness command")
+                self.logger.warning(f"action_control_device: Device type {device.deviceTypeId} does not support SetBrightness command")
 
-        elif pluginAction.deviceAction == indigo.kDeviceAction.BrightenBy:
+        elif plugin_action.deviceAction == indigo.kDeviceAction.BrightenBy:
             newBrightness = device.brightness + action.actionValue
             if newBrightness > 100:
                 newBrightness = 100
@@ -550,9 +756,9 @@ class Plugin(indigo.PluginBase):
                 self.bond_bridges[bondID].set_bridge_info({"bluelight": level})
                 device.updateStateOnServer(key='brightnessLevel', value=newBrightness)
             else:
-                self.logger.warning(f"actionControlDevice: Device type {device.deviceTypeId} does not support BrightenBy command")
+                self.logger.warning(f"action_control_device: Device type {device.deviceTypeId} does not support BrightenBy command")
 
-        elif pluginAction.deviceAction == indigo.kDeviceAction.DimBy:
+        elif plugin_action.deviceAction == indigo.kDeviceAction.DimBy:
             newBrightness = device.brightness - action.actionValue
             if newBrightness < 0:
                 newBrightness = 0
@@ -562,23 +768,23 @@ class Plugin(indigo.PluginBase):
                 self.bond_bridges[bondID].set_bridge_info({"bluelight": level})
                 device.updateStateOnServer(key='brightnessLevel', value=newBrightness)
             else:
-                self.logger.warning(f"actionControlDevice: Device type {device.deviceTypeId} does not support DimBy command")
+                self.logger.warning(f"action_control_device: Device type {device.deviceTypeId} does not support DimBy command")
 
     ########################################
     # Plugin Actions object callbacks (pluginAction is an Indigo plugin action instance)
     ########################################
 
-    def getActionConfigUiValues(self, actionProps, typeId, devId):
-        self.logger.debug(f"getActionConfigUiValues, typeId = {typeId}, devId = {devId}, actionProps = {actionProps}")
-        valuesDict = actionProps
-        errorMsgDict = indigo.Dict()
+    def get_action_config_ui_values(self, action_props, type_id, dev_id):
+        self.logger.debug(f"get_action_config_ui_values, {type_id=}, {dev_id=}, {action_props=}")
+        values_dict = action_props
+        error_msg_dict = indigo.Dict()
 
-        self.logger.debug(f"getActionConfigUiValues, bond_bridges = {self.bond_bridges}")
+        self.logger.debug(f"get_action_config_ui_values, bond_bridges = {self.bond_bridges}")
 
         # Preload the first bridge device, if not already specified
-        if not valuesDict.get('bridge', None) and len(self.bond_bridges):
-            valuesDict['bridge'] = list(self.bond_bridges.keys())[0]
-        return valuesDict, errorMsgDict
+        if not values_dict.get('bridge', None) and len(self.bond_bridges):
+            values_dict['bridge'] = list(self.bond_bridges.keys())[0]
+        return values_dict, error_msg_dict
 
     def doDeviceAction(self, pluginAction):
         self.logger.debug(f"doDeviceAction, pluginAction = {pluginAction}")
