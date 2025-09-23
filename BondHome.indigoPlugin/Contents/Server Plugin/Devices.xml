@@ -9,62 +9,68 @@
 			<Field id="bond_type" type="textfield" hidden="true" />
 
         <!-- Factory Device Type Selection -->
-        ￼   <Field type="menu" id="deviceType" defaultValue="bondBridge">
+        ￼   <Field type="menu" id="deviceType">
                 <Label>Device Type:</Label>
                 <List>
-                    <Option value="bondBridge">Bond Bridge</Option>
-                    <Option value="bondDevice">Bond Device</Option>
+                    <Option value="bondBridge">Bond Bridge or Bridge Pro</Option>
+                    <Option value="bondDevice">Bond Controlled Device</Option>
+                    <Option value="bondSmart">Smart by Bond Device</Option>
                 </List>
                 <CallbackMethod>menuChanged</CallbackMethod>
             </Field>
              <Field id="separator1" type="separator"/>
 
-        <!-- Bond Bridge  -->
-            <Field id="found_list" type="menu" defaultValue="" visibleBindingId="deviceType" visibleBindingValue="bondBridge">
+            <!-- Bond Bridge and Smart by Bond -->
+
+            <Field id="found_bridge_list" type="menu" defaultValue="" visibleBindingId="deviceType" visibleBindingValue="(bondBridge, bondSmart)">
                 <Label>Discovered Bridges:</Label>
-                <List class="self" method="found_device_list" dynamicReload="true"/>
+                <List class="self" method="found_bridge_list" dynamicReload="true"/>
                  <CallbackMethod>menuChanged</CallbackMethod>
             </Field>
-            <Field id="ip_address" type="textfield"  defaultValue="" tooltip="Enter IP address or Hostname of Bond device."
-                   visibleBindingId="deviceType" visibleBindingValue="bondBridge">
+            <Field id="address" type="textfield"  defaultValue="" tooltip="Enter IP address or Hostname of Bond device."
+                   visibleBindingId="deviceType" visibleBindingValue="(bondBridge, bondSmart)">
 				<Label>IP Address or Hostname:</Label>
+                 <CallbackMethod>menuChanged</CallbackMethod>
 			</Field>
-			<Field id="token" type="textfield" defaultValue="" tooltip="Local Token" visibleBindingId="deviceType" visibleBindingValue="bondBridge">
+			<Field id="token" type="textfield" defaultValue="" tooltip="Local Token" visibleBindingId="deviceType" visibleBindingValue="(bondBridge, bondSmart)">
 				<Label>Local Token:</Label>
 			</Field>
 
-            <!-- Bond  Device -->
+            <!-- Bridge Controlled Device -->
 
-            <Field id="bridge" type="menu" visibleBindingId="deviceType" visibleBindingValue="bondDevice" alwaysUseInDialogHeightCalc="true">
+            <Field id="bridge" type="menu" visibleBindingId="deviceType" visibleBindingValue="(bondDevice)" alwaysUseInDialogHeightCalc="true">
                 <Label>Bridge:</Label>
                 <List class="self" method="get_bridge_list" dynamicReload="true"/>
                 <CallbackMethod>menuChanged</CallbackMethod>
             </Field>
-            <Field id="address" type="menu" visibleBindingId="deviceType" visibleBindingValue="bondDevice" alwaysUseInDialogHeightCalc="true">
+            <Field id="bond_device_id" type="menu" visibleBindingId="deviceType" visibleBindingValue="(bondDevice)" alwaysUseInDialogHeightCalc="true">
                 <Label>Device:</Label>
                 <List class="self" method="get_device_list" dynamicReload="true"/>
                 <CallbackMethod>menuChanged</CallbackMethod>
             </Field>
-             <Field id="on_command" type="menu" visibleBindingId="deviceType" visibleBindingValue="bondDevice" alwaysUseInDialogHeightCalc="true">
+
+            <!-- Bridge Controlled Device or Smart by Bond -->
+
+             <Field id="on_command" type="menu" visibleBindingId="deviceType" visibleBindingValue="(bondDevice, bondSmart)" alwaysUseInDialogHeightCalc="true">
                 <Label>On Command:</Label>
                 <List class="self" method="get_action_list" dynamicReload="true"/>
             </Field>
-             <Field id="on_parameter" type="textfield" visibleBindingId="deviceType" visibleBindingValue="bondDevice" alwaysUseInDialogHeightCalc="true">
+             <Field id="on_parameter" type="textfield" visibleBindingId="deviceType" visibleBindingValue="(bondDevice, bondSmart)" alwaysUseInDialogHeightCalc="true">
                 <Label>On Parameter:</Label>
             </Field>
-            <Field id="off_command" type="menu" visibleBindingId="deviceType" visibleBindingValue="bondDevice" alwaysUseInDialogHeightCalc="true">
+            <Field id="off_command" type="menu" visibleBindingId="deviceType" visibleBindingValue="(bondDevice, bondSmart)" alwaysUseInDialogHeightCalc="true">
                 <Label>Off Command:</Label>
                 <List class="self" method="get_action_list" dynamicReload="true"/>
             </Field>
-            <Field id="off_parameter" type="textfield" visibleBindingId="deviceType" visibleBindingValue="bondDevice" alwaysUseInDialogHeightCalc="true">
+            <Field id="off_parameter" type="textfield" visibleBindingId="deviceType" visibleBindingValue="(bondDevice, bondSmart)" alwaysUseInDialogHeightCalc="true">
                 <Label>Off Parameter:</Label>
             </Field>
-			<Field id="argumentNote1" type="label" fontSize="small" fontColor="darkgray"
-                   visibleBindingId="deviceType" visibleBindingValue="bondDevice" alwaysUseInDialogHeightCalc="true">
+			<Field id="argumentNote3" type="label" fontSize="small" fontColor="darkgray"
+                   visibleBindingId="deviceType" visibleBindingValue="(bondDevice, bondSmart)" alwaysUseInDialogHeightCalc="true">
 				<Label>Some device commands, such as 'SetSpeed' for ceiling fans, require a parameter.  Leave blank if not required.</Label>
 			</Field>
-			<Field id="argumentNote2" type="label" fontSize="small" fontColor="darkgray"
-                   visibleBindingId="deviceType" visibleBindingValue="bondDevice" alwaysUseInDialogHeightCalc="true">
+			<Field id="argumentNote4" type="label" fontSize="small" fontColor="darkgray"
+                   visibleBindingId="deviceType" visibleBindingValue="(bondDevice, bondSmart)" alwaysUseInDialogHeightCalc="true">
 				<Label>Variable and Device State Substitution is enabled for this field. Use the format %%v:12345%% for variables and %%d:12345:someStateId%% for device states.</Label>
 			</Field>
         </ConfigUI>
@@ -85,48 +91,38 @@
 			<Field id="token" type="textfield" defaultValue="" tooltip="Local Token">
 				<Label>Local Token:</Label>
 			</Field>
-       </ConfigUI>
+        </ConfigUI>
         <States>
-            <State id="fw_ver" readonly="true">
-                <ValueType >String</ValueType>
-                <TriggerLabel>Firmware Version</TriggerLabel>
-                <ControlPageLabel>Firmware Version</ControlPageLabel>
-            </State>
-            <State id="fw_date" readonly="true">
-                <ValueType >String</ValueType>
-                <TriggerLabel>Firmware Date</TriggerLabel>
-                <ControlPageLabel>Firmware Date</ControlPageLabel>
-            </State>
-            <State id="uptime_s" readonly="true">
-                <ValueType >String</ValueType>
-                <TriggerLabel>Uptime</TriggerLabel>
-                <ControlPageLabel>Uptime</ControlPageLabel>
-            </State>
-            <State id="make" readonly="true">
-                <ValueType >String</ValueType>
-                <TriggerLabel>Make</TriggerLabel>
-                <ControlPageLabel>Make</ControlPageLabel>
-            </State>
-            <State id="model" readonly="true">
-                <ValueType >String</ValueType>
-                <TriggerLabel>Model</TriggerLabel>
-                <ControlPageLabel>Model</ControlPageLabel>
-            </State>
-            <State id="bondid" readonly="true">
-                <ValueType >String</ValueType>
-                <TriggerLabel>Bond ID</TriggerLabel>
-                <ControlPageLabel>Bond ID</ControlPageLabel>
-            </State>
-            <State id="name" readonly="true">
-                <ValueType >String</ValueType>
-                <TriggerLabel>Name</TriggerLabel>
-                <ControlPageLabel>Name</ControlPageLabel>
-            </State>
-            <State id="location" readonly="true">
-                <ValueType >String</ValueType>
-                <TriggerLabel>Location</TriggerLabel>
-                <ControlPageLabel>Location</ControlPageLabel>
-            </State>
+        </States>
+     </Device>
+
+    <Device id="bondSmart" type="custom">
+        <Name>Bond Bridge</Name>
+        <ConfigUI>
+            <Field id="SupportsStatusRequest" type="checkbox" defaultValue="false" hidden="true" />
+            <Field id="found_list" type="menu" defaultValue="" >
+                <Label>Discovered Bridges:</Label>
+                <List class="self" method="found_device_list" dynamicReload="true"/>
+                 <CallbackMethod>menuChanged</CallbackMethod>
+            </Field>
+            <Field id="address" type="textfield"  defaultValue="" tooltip="Enter IP address or Hostname of Bond device.">
+				<Label>IP Address or Hostname:</Label>
+			</Field>
+			<Field id="token" type="textfield" defaultValue="" tooltip="Local Token">
+				<Label>Local Token:</Label>
+			</Field>
+        </ConfigUI>
+        <States>
+        </States>
+     </Device>
+
+
+    <Device id="bondDevice" type="custom">
+        <Name>Bond Bridge</Name>
+        <ConfigUI>
+            <Field id="SupportsStatusRequest" type="checkbox" defaultValue="false" hidden="true" />
+        </ConfigUI>
+        <States>
         </States>
      </Device>
 
