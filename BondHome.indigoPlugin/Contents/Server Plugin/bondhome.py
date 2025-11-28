@@ -12,6 +12,7 @@ from threading import Thread
 PING_TIMEOUT = 60.0
 
 
+
 ################################################################################
 class BondHome(object):
 
@@ -41,7 +42,6 @@ class BondHome(object):
         if not self.sock:
             self.sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
             self.sock.settimeout(PING_TIMEOUT)
-            self.logger.debug("udp_start() socket created")
 
         # start up the receiver thread
         self.receive_thread.start()
@@ -54,7 +54,6 @@ class BondHome(object):
             now = time.time()
             if now > self.next_ping:
                 self.sock.sendto('\n'.encode("utf-8"), (self.address, 30007))
-                self.logger.threaddebug("udp_receive() ping sent")
                 self.next_ping = now + PING_TIMEOUT
 
             try:
@@ -65,7 +64,6 @@ class BondHome(object):
                 raise
             else:
                 data = json.loads(json_data.decode("utf-8"))
-                self.logger.threaddebug(f"udp_receive() data: {data}")
 
             if topic := data.get('t'):
                 parts = topic.split('/')
@@ -92,28 +90,28 @@ class BondHome(object):
             self.logger.warning(f"Device Action error {resp.status_code} for {url} with payload {payload}")
 
     def get_bridge_version(self):
-        self.logger.debug(f"get_bridge_version")
+        self.logger.debug(f"get_bridge_version: {self.address}")
         url = f"http://{self.address}/v2/sys/version"
         resp = requests.get(url, headers=self.token_header)
         resp.raise_for_status()
         return resp.json()
 
     def get_bridge_info(self):
-        self.logger.debug(f"get_bridge_info")
+        self.logger.debug(f"get_bridge_info: {self.address}")
         url = f"http://{self.address}/v2/bridge"
         resp = requests.get(url, headers=self.token_header)
         resp.raise_for_status()
         return resp.json()
 
     def set_bridge_info(self, data):
-        self.logger.debug(f"set_bridge_info = {data}")
+        self.logger.debug(f"set_bridge_info: {self.address} = {data}")
         url = f"http://{self.address}/v2/bridge"
         resp = requests.patch(url, headers=self.token_header, json=data)
         resp.raise_for_status()
         return resp.json()
 
     def get_device_list(self):
-        self.logger.debug(f"get_device_list")
+        self.logger.debug(f"get_device_list: {self.address}")
         url = f"http://{self.address}/v2/devices"
         resp = requests.get(url, headers=self.token_header)
         resp.raise_for_status()
@@ -125,28 +123,28 @@ class BondHome(object):
         return retList
 
     def get_device(self, device_id):
-        self.logger.debug(f"get_device: {device_id}")
+        self.logger.debug(f"get_device: {device_id} @ {self.address}")
         url = f"http://{self.address}/v2/devices/{device_id}"
         resp = requests.get(url, headers=self.token_header)
         resp.raise_for_status()
         return resp.json()
 
     def get_device_state(self, device_id):
-        self.logger.debug(f"get_device_state: {device_id}")
+        self.logger.debug(f"get_device_state: {device_id} @ {self.address}")
         url = f"http://{self.address}/v2/devices/{device_id}/state"
         resp = requests.get(url, headers=self.token_header)
         resp.raise_for_status()
         return resp.json()
 
     def update_device_state(self, device_id, payload):
-        self.logger.debug(f"update_device_state: {device_id}, {payload}")
+        self.logger.debug(f"update_device_state: {device_id} @ {self.address}, {payload}")
         url = f"http://{self.address}/v2/devices/{device_id}/state"
         resp = requests.patch(url, headers=self.token_header, json=payload)
         resp.raise_for_status()
         return resp.json()
 
     def get_device_command_list(self, device_id):
-        self.logger.debug(f"get_device_command_list: {device_id}")
+        self.logger.debug(f"get_device_command_list: {device_id} @ {self.address}")
         url = f"http://{self.address}/v2/devices/{device_id}/commands"
         resp = requests.get(url, headers=self.token_header)
         resp.raise_for_status()
@@ -157,22 +155,22 @@ class BondHome(object):
         return retList
 
     def get_device_command(self, device_id, command_id):
-        self.logger.debug(f"get_device_command: {device_id}, {command_id}")
-        url = "http://{}/v2/devices/{}/commands/{}".format(self.address, device_id, command_id)
+        self.logger.debug(f"get_device_command: {device_id} @ {self.address}, {command_id}")
+        url = f"http://{self.address}/v2/devices/{device_id}/commands/{command_id}"
         resp = requests.get(url, headers=self.token_header)
         resp.raise_for_status()
         return resp.json()
 
     def set_device_command_signal(self, device_id, command_id, payload):
-        self.logger.debug(f"set_device_command_signal: {device_id}, {command_id}, {payload}")
-        url = "http://{}/v2/devices/{}/commands/{}/signal".format(self.address, device_id, command_id)
+        self.logger.debug(f"set_device_command_signal: {device_id} @ {self.address}, {command_id}, {payload}")
+        url = f"http://{self.address}/v2/devices/{device_id}/commands/{command_id}/signal"
         resp = requests.patch(url, headers=self.token_header, json=payload)
         resp.raise_for_status()
         return resp.json()
 
     def enable_bpup(self, enable=True):
-        self.logger.debug(f"enable_bpup: {enable}")
-        url = "http://{}/v2/api/bpup".format(self.address)
+        self.logger.debug(f"enable_bpup: {enable} @ {self.address}")
+        url = f"http://{self.address}/v2/api/bpup"
         payload = {"broadcast": enable}
         resp = requests.patch(url, headers=self.token_header, json=payload)
         resp.raise_for_status()

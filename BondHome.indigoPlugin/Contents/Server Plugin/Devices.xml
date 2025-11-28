@@ -49,6 +49,11 @@
                 <TriggerLabel>Bond ID</TriggerLabel>
                 <ControlPageLabel>Bond ID</ControlPageLabel>
             </State>
+            <State id="ip_address" readonly="true">
+                <ValueType >String</ValueType>
+                <TriggerLabel>IP Address</TriggerLabel>
+                <ControlPageLabel>IP Address</ControlPageLabel>
+            </State>
             <State id="name" readonly="true">
                 <ValueType >String</ValueType>
                 <TriggerLabel>Name</TriggerLabel>
