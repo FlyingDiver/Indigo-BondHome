@@ -1,6 +1,5 @@
 #! /usr/bin/env python
 # -*- coding: utf-8 -*-
-from ipaddress import ip_address
 
 import indigo  # noqa
 import logging
@@ -87,6 +86,7 @@ class Plugin(indigo.PluginBase):
 
         # ensure device definition is up to date
         device.stateListOrDisplayStateIdChanged()
+        device.updateStateImageOnServer(indigo.kStateImageSel.NoImage)
 
         if device.deviceTypeId == "bondBridge":
             try:
@@ -94,8 +94,7 @@ class Plugin(indigo.PluginBase):
                 # So we'll use the IP address instead.
                 bridge = BondHome(socket.gethostbyname(device.pluginProps['address']), device.pluginProps['token'])
             except Exception as err:
-                self.logger.debug(f"{device.name}: BondHome __init__ error: {err}")
-                device.updateStateImageOnServer(indigo.kStateImageSel.SensorTripped)
+                self.logger.warning(f"{device.name}: BondHome __init__ error: {err}")
                 return
 
             try:
@@ -302,14 +301,14 @@ class Plugin(indigo.PluginBase):
         return valuesDict
 
     @staticmethod
-    def get_bridge_list(filter="", valuesDict=None, typeId="", targetId=0):
+    def get_bridge_list(_filter="", _valuesDict=None, _typeId="", _targetId=0):
         retList = []
         for dev in indigo.devices.iter("self.bondBridge"):
             retList.append((dev.states['bondid'], dev.name))
         retList.sort(key=lambda tup: tup[1])
         return retList
 
-    def get_device_list(self, filter="", valuesDict=None, typeId="", targetId=0):
+    def get_device_list(self, _filter="", valuesDict=None, _typeId="", _targetId=0):
         retList = []
         bondid = valuesDict.get("bridge", None)
         if not bondid:
@@ -319,7 +318,7 @@ class Plugin(indigo.PluginBase):
         retList.sort(key=lambda tup: tup[1])
         return retList
 
-    def get_action_list(self, filter="", valuesDict=None, typeId="", targetId=0):
+    def get_action_list(self, _filter="", valuesDict=None, _typeId="", targetId=0):
         retList = []
         bondid = valuesDict.get("bridge", None)
         if not bondid:
