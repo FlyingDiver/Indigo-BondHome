@@ -106,12 +106,12 @@ class Plugin(indigo.PluginBase):
 
             self.logger.debug(f"{device.name}: Bond version: {version}")
             stateList = [
-                {'key': 'fw_ver', 'value': version.get('fw_ver', "")},
-                {'key': 'fw_date', 'value': version.get('fw_date',"")},
-                {'key': 'uptime_s', 'value': version.get('uptime_s', "")},
-                {'key': 'make', 'value': version.get('make',"")},
-                {'key': 'model', 'value': version.get('model',"")},
-                {'key': 'bondid', 'value': version.get('bondid',"")},
+                {'key': 'fw_ver', 'value': version['fw_ver']},
+                {'key': 'fw_date', 'value': version['fw_date']},
+                {'key': 'uptime_s', 'value': version['uptime_s']},
+                {'key': 'make', 'value': version['make']},
+                {'key': 'model', 'value': version['model']},
+                {'key': 'bondid', 'value': version['bondid']},
             ]
             device.updateStatesOnServer(stateList)
 
@@ -379,14 +379,7 @@ class Plugin(indigo.PluginBase):
                 device.updateStateOnServer(key='brightnessLevel', value=100)
             elif device.deviceTypeId == "bondDevice":
                 bridge = self.bond_bridges[device.pluginProps["bridge"]]
-                try:
-                    parameter = indigo.activePlugin.substitute(device.pluginProps["on_parameter"])
-                except Exception as err:
-                    parameter = ""
-                if len(parameter):
-                    payload = {"argument": int(parameter)}
-                else:
-                    payload = {}
+                payload = {}
                 bridge.device_action(device.address, device.pluginProps["on_command"], payload)
             else:
                 self.logger.warning(f"actionControlDevice: Device type {device.deviceTypeId} does not support On command")
@@ -398,14 +391,7 @@ class Plugin(indigo.PluginBase):
                 device.updateStateOnServer(key='brightnessLevel', value=0)
             elif device.deviceTypeId == "bondDevice":
                 bridge = self.bond_bridges[device.pluginProps["bridge"]]
-                try:
-                    parameter = indigo.activePlugin.substitute(device.pluginProps["off_parameter"])
-                except Exception as err:
-                    parameter = ""
-                if len(parameter):
-                    payload = {"argument": int(parameter)}
-                else:
-                    payload = {}
+                payload = {}
                 bridge.device_action(device.address, device.pluginProps["off_command"], payload)
             else:
                 self.logger.warning(f"actionControlDevice: Device type {device.deviceTypeId} does not support Off command")
@@ -415,25 +401,10 @@ class Plugin(indigo.PluginBase):
                 pass
             elif device.deviceTypeId == "bondDevice":
                 bridge = self.bond_bridges[device.pluginProps["bridge"]]
+                payload = {}
                 if device.onState:
-                    try:
-                        parameter = indigo.activePlugin.substitute(device.pluginProps["off_parameter"])
-                    except Exception as err:
-                        parameter = ""
-                    if len(parameter):
-                        payload = {"argument": int(parameter)}
-                    else:
-                        payload = {}
                     bridge.device_action(device.address, device.pluginProps["off_command"], payload)
                 else:
-                    try:
-                        parameter = indigo.activePlugin.substitute(device.pluginProps["on_parameter"])
-                    except Exception as err:
-                        parameter = ""
-                    if len(parameter):
-                        payload = {"argument": int(parameter)}
-                    else:
-                        payload = {}
                     bridge.device_action(device.address, device.pluginProps["on_command"], payload)
             else:
                 self.logger.warning(f"actionControlDevice: Device type {device.deviceTypeId} does not support Toggle command")
