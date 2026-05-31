@@ -15,3 +15,4 @@ Create bridge device with IP address and token.
 Create devices for shades/fans/etc.
 
 Use the "Bond Home -> Send Device Command" action to send commands to the devices.
+Use the "Bond Home -> Execute Scene" action or menu command to run Bond scenes.

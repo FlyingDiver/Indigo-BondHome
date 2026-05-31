@@ -5,5 +5,20 @@
         <Name>Write Device Information to Log</Name>
         <CallbackMethod>dumpConfig</CallbackMethod>
     </MenuItem>
+    <MenuItem id="executeSceneMenu">
+        <Name>Execute Scene</Name>
+        <CallbackMethod>executeSceneMenu</CallbackMethod>
+        <ConfigUI>
+            <Field id="bridge" type="menu">
+                <Label>Bridge:</Label>
+                <List class="self" method="get_bridge_list" dynamicReload="true"/>
+                <CallbackMethod>menuChanged</CallbackMethod>
+            </Field>
+            <Field id="scene" type="menu">
+                <Label>Scene:</Label>
+                <List class="self" method="get_scene_list" dynamicReload="true"/>
+                <CallbackMethod>menuChanged</CallbackMethod>
+            </Field>
+        </ConfigUI>
+    </MenuItem>
 </MenuItems>
-

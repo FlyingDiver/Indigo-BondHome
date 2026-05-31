@@ -168,6 +168,31 @@ class BondHome(object):
         resp.raise_for_status()
         return resp.json()
 
+    def get_scene_list(self):
+        self.logger.debug(f"get_scene_list: {self.address}")
+        url = f"http://{self.address}/v2/scenes"
+        resp = requests.get(url, headers=self.token_header)
+        resp.raise_for_status()
+        retList = []
+        for key in resp.json():
+            if not key.startswith("_"):     # skip internal keys
+                retList.append(key)
+        return retList
+
+    def get_scene(self, scene_id):
+        self.logger.debug(f"get_scene: {scene_id} @ {self.address}")
+        url = f"http://{self.address}/v2/scenes/{scene_id}"
+        resp = requests.get(url, headers=self.token_header)
+        resp.raise_for_status()
+        return resp.json()
+
+    def execute_scene(self, scene_id):
+        self.logger.debug(f"execute_scene: {scene_id} @ {self.address}")
+        url = f"http://{self.address}/v2/scenes/{scene_id}/actions/Activate"
+        resp = requests.put(url, headers=self.token_header)
+        if not resp.ok:
+            self.logger.warning(f"Execute Scene error {resp.status_code} for {url}")
+
     def enable_bpup(self, enable=True):
         self.logger.debug(f"enable_bpup: {enable} @ {self.address}")
         url = f"http://{self.address}/v2/api/bpup"

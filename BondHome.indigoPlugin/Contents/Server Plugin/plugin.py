@@ -35,6 +35,7 @@ class Plugin(indigo.PluginBase):
         self.bond_bridges = {}          # dict of bridge devices, keyed by BondID, value id BondHome object
         self.bond_devices = {}          # dict of "client" devices, keyed by (bond) device_ID, value is Indigo device.id
         self.known_devices = {}         # nested dict of client devices, keyed by BondID then device_ID, value is dict returned by get_device()
+        self.known_scenes = {}          # nested dict of scenes, keyed by BondID then scene_ID, value is dict returned by get_scene()
         self.deferred_start = []        # devices that need to be started after the bridges are all running
 
     def startup(self):
@@ -136,7 +137,13 @@ class Plugin(indigo.PluginBase):
             self.known_devices[bondID] = {}
             for bond_dev in bridge.get_device_list():
                 self.known_devices[bondID][bond_dev] = bridge.get_device(bond_dev)
+
+            # get all the scenes the bridge knows about
+            self.known_scenes[bondID] = {}
+            for bond_scene in bridge.get_scene_list():
+                self.known_scenes[bondID][bond_scene] = bridge.get_scene(bond_scene)
             self.logger.debug(f"{device.name}: known_devices:\n{self.known_devices}")
+            self.logger.debug(f"{device.name}: known_scenes:\n{self.known_scenes}")
 
             # start up the BPUP socket connection
             bridge.udp_start(self.receiveBPUP)
@@ -209,6 +216,10 @@ class Plugin(indigo.PluginBase):
             if bondID in self.bond_bridges:
                 self.bond_bridges[bondID].udp_stop()
                 del self.bond_bridges[bondID]
+            if bondID in self.known_devices:
+                del self.known_devices[bondID]
+            if bondID in self.known_scenes:
+                del self.known_scenes[bondID]
 
         elif device.deviceTypeId == "smartBond":
             bondID = device.states['bondid']
@@ -343,6 +354,16 @@ class Plugin(indigo.PluginBase):
 
         for cmd in dev_info['actions']:
             retList.append((cmd, cmd))
+        return retList
+
+    def get_scene_list(self, _filter="", valuesDict=None, _typeId="", _targetId=0):
+        retList = []
+        bondid = valuesDict.get("bridge", None)
+        if not bondid:
+            return retList
+        for scene_id, scene_info in self.known_scenes.get(bondid, {}).items():
+            retList.append((scene_id, scene_info.get("name", scene_id)))
+        retList.sort(key=lambda tup: tup[1])
         return retList
 
     ########################################
@@ -519,11 +540,33 @@ class Plugin(indigo.PluginBase):
         else:
             self.logger.debug(f"setCommandRepeatAction: repeat value = {result['reps']}")
 
+    def executeSceneAction(self, pluginAction):
+        self.logger.debug(f"executeSceneAction, pluginAction = {pluginAction}")
+        bridge = self.bond_bridges[pluginAction.props["bridge"]]
+        bridge.execute_scene(pluginAction.props["scene"])
+        return True
+
     ########################################
     # Plugin Menu object callbacks
     ########################################
 
+    def executeSceneMenu(self, valuesDict=None, typeId="", menuId=""):
+        self.logger.debug(f"executeSceneMenu: typeId = {typeId}, menuId = {menuId}, valuesDict = {valuesDict}")
+        bridge_id = valuesDict.get("bridge", "")
+        scene_id = valuesDict.get("scene", "")
+        if not bridge_id or not scene_id:
+            self.logger.warning("executeSceneMenu: Bridge and Scene selections are required")
+            return False
+        try:
+            bridge = self.bond_bridges[bridge_id]
+        except KeyError:
+            self.logger.warning(f"executeSceneMenu: Bridge not active: {bridge_id}")
+            return False
+        bridge.execute_scene(scene_id)
+        return True
+
     def dumpConfig(self):
         self.logger.info(f"\n{json.dumps(self.found_devices, sort_keys=True, indent=4, separators=(',', ': '))}")
         self.logger.info(f"\n{json.dumps(self.known_devices, sort_keys=True, indent=4, separators=(',', ': '))}")
+        self.logger.info(f"\n{json.dumps(self.known_scenes, sort_keys=True, indent=4, separators=(',', ': '))}")
         return True
