@@ -169,7 +169,6 @@ class BondHome(object):
         return resp.json()
 
     def get_scene_list(self):
-        self.logger.debug(f"get_scene_list: {self.address}")
         url = f"http://{self.address}/v2/scenes"  # noqa
         resp = requests.get(url, headers=self.token_header)
         resp.raise_for_status()
@@ -181,15 +180,12 @@ class BondHome(object):
         return retList
 
     def get_scene(self, scene_id):
-        self.logger.debug(f"get_scene: {scene_id} @ {self.address}")
         url = f"http://{self.address}/v2/scenes/{scene_id}"  # noqa
         resp = requests.get(url, headers=self.token_header)
         resp.raise_for_status()
-        self.logger.debug(f"get_scene: {self.address}, {resp.json()=}")
         return resp.json()
 
     def execute_scene(self, scene_id):
-        self.logger.debug(f"execute_scene: {scene_id} @ {self.address}")
         url = f"http://{self.address}/v2/scenes/{scene_id}/run"  # noqa
         resp = requests.put(url, headers=self.token_header, json={})
         if not resp.ok:
