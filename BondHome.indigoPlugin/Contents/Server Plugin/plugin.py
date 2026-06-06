@@ -145,7 +145,7 @@ class Plugin(indigo.PluginBase):
                 for bond_scene in bridge.get_scene_list():
                     self.known_scenes[bondID][bond_scene] = bridge.get_scene(bond_scene)
                 self.logger.debug(f"{device.name}: known_scenes:\n{self.known_scenes[bondID]}")
-            except Exception as err:
+            except Exception as _err:
                 del self.known_scenes[bondID]
 
             # start up the BPUP socket connection
@@ -314,11 +314,16 @@ class Plugin(indigo.PluginBase):
             valuesDict['address'] = valuesDict['found_list']
         return valuesDict
 
-    def get_bridge_list(self, filter="", _valuesDict=None, _typeId="", _targetId=0):
+    def menuChangedMenu(self, valuesDict, typeId):
+        self.logger.threaddebug(f"menuChangedMenu: typeId = {typeId}, valuesDict = {valuesDict}")
+        if typeId == "bondBridge" or typeId == "smartBond":
+            valuesDict['address'] = valuesDict['found_list']
+        return valuesDict
+
+    @staticmethod
+    def get_bridge_list(_filter="", _valuesDict=None, _typeId="", _targetId=0):
         retList = []
         for dev in indigo.devices.iter("self.bondBridge"):
-            if filter == "scenes" and self.known_scenes.get(dev.address) is None:
-                continue
             retList.append((dev.states['bondid'], dev.name))
         retList.sort(key=lambda tup: tup[1])
         return retList
@@ -368,6 +373,7 @@ class Plugin(indigo.PluginBase):
         for scene_id, scene_info in self.known_scenes.get(bondid, {}).items():
             retList.append((scene_id, scene_info.get("name", scene_id)))
         retList.sort(key=lambda tup: tup[1])
+        self.logger.debug(f"get_scene_list: {bondid=}, {retList=}")
         return retList
 
     ########################################
@@ -541,7 +547,7 @@ class Plugin(indigo.PluginBase):
         return True
 
     def dumpConfig(self):
-        self.logger.info(f"\n{json.dumps(self.found_devices, sort_keys=True, indent=4, separators=(',', ': '))}")
-        self.logger.info(f"\n{json.dumps(self.known_devices, sort_keys=True, indent=4, separators=(',', ': '))}")
-        self.logger.info(f"\n{json.dumps(self.known_scenes, sort_keys=True, indent=4, separators=(',', ': '))}")
+        self.logger.info(f"Found Devices:\n{json.dumps(self.found_devices, sort_keys=True, indent=4, separators=(',', ': '))}")
+        self.logger.info(f"Known Devices:\n{json.dumps(self.known_devices, sort_keys=True, indent=4, separators=(',', ': '))}")
+        self.logger.info(f"Known Scenes:\n{json.dumps(self.known_scenes, sort_keys=True, indent=4, separators=(',', ': '))}")
         return True

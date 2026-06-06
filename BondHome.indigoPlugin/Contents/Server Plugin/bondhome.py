@@ -58,9 +58,9 @@ class BondHome(object):
 
             try:
                 json_data, address = self.sock.recvfrom(2048)
-            except socket.timeout as err:
+            except socket.timeout as _err:
                 continue
-            except socket.error as err:
+            except socket.error as _err:
                 raise
             else:
                 data = json.loads(json_data.decode("utf-8"))
@@ -83,7 +83,7 @@ class BondHome(object):
     ########################################
 
     def device_action(self, device_id, action, payload=None):
-        url = f"http://{self.address}/v2/devices/{device_id}/actions/{action}"
+        url = f"http://{self.address}/v2/devices/{device_id}/actions/{action}" # noqa
         self.logger.debug(f"device_action, url = {url}, payload = {payload}")
         resp = requests.put(url, headers=self.token_header, json=payload)
         if not resp.ok:
@@ -91,28 +91,28 @@ class BondHome(object):
 
     def get_bridge_version(self):
         self.logger.debug(f"get_bridge_version: {self.address}")
-        url = f"http://{self.address}/v2/sys/version"
+        url = f"http://{self.address}/v2/sys/version"   # noqa
         resp = requests.get(url, headers=self.token_header)
         resp.raise_for_status()
         return resp.json()
 
     def get_bridge_info(self):
         self.logger.debug(f"get_bridge_info: {self.address}")
-        url = f"http://{self.address}/v2/bridge"
+        url = f"http://{self.address}/v2/bridge"  # noqa
         resp = requests.get(url, headers=self.token_header)
         resp.raise_for_status()
         return resp.json()
 
     def set_bridge_info(self, data):
         self.logger.debug(f"set_bridge_info: {self.address} = {data}")
-        url = f"http://{self.address}/v2/bridge"
+        url = f"http://{self.address}/v2/bridge"  # noqa
         resp = requests.patch(url, headers=self.token_header, json=data)
         resp.raise_for_status()
         return resp.json()
 
     def get_device_list(self):
         self.logger.debug(f"get_device_list: {self.address}")
-        url = f"http://{self.address}/v2/devices"
+        url = f"http://{self.address}/v2/devices"  # noqa
         resp = requests.get(url, headers=self.token_header)
         resp.raise_for_status()
         self.logger.debug(f"get_device_list: {resp.json()}")
@@ -124,28 +124,28 @@ class BondHome(object):
 
     def get_device(self, device_id):
         self.logger.debug(f"get_device: {device_id} @ {self.address}")
-        url = f"http://{self.address}/v2/devices/{device_id}"
+        url = f"http://{self.address}/v2/devices/{device_id}"  # noqa
         resp = requests.get(url, headers=self.token_header)
         resp.raise_for_status()
         return resp.json()
 
     def get_device_state(self, device_id):
         self.logger.debug(f"get_device_state: {device_id} @ {self.address}")
-        url = f"http://{self.address}/v2/devices/{device_id}/state"
+        url = f"http://{self.address}/v2/devices/{device_id}/state"  # noqa
         resp = requests.get(url, headers=self.token_header)
         resp.raise_for_status()
         return resp.json()
 
     def update_device_state(self, device_id, payload):
         self.logger.debug(f"update_device_state: {device_id} @ {self.address}, {payload}")
-        url = f"http://{self.address}/v2/devices/{device_id}/state"
+        url = f"http://{self.address}/v2/devices/{device_id}/state"  # noqa
         resp = requests.patch(url, headers=self.token_header, json=payload)
         resp.raise_for_status()
         return resp.json()
 
     def get_device_command_list(self, device_id):
         self.logger.debug(f"get_device_command_list: {device_id} @ {self.address}")
-        url = f"http://{self.address}/v2/devices/{device_id}/commands"
+        url = f"http://{self.address}/v2/devices/{device_id}/commands"  # noqa
         resp = requests.get(url, headers=self.token_header)
         resp.raise_for_status()
         retList = []
@@ -156,46 +156,48 @@ class BondHome(object):
 
     def get_device_command(self, device_id, command_id):
         self.logger.debug(f"get_device_command: {device_id} @ {self.address}, {command_id}")
-        url = f"http://{self.address}/v2/devices/{device_id}/commands/{command_id}"
+        url = f"http://{self.address}/v2/devices/{device_id}/commands/{command_id}"  # noqa
         resp = requests.get(url, headers=self.token_header)
         resp.raise_for_status()
         return resp.json()
 
     def set_device_command_signal(self, device_id, command_id, payload):
         self.logger.debug(f"set_device_command_signal: {device_id} @ {self.address}, {command_id}, {payload}")
-        url = f"http://{self.address}/v2/devices/{device_id}/commands/{command_id}/signal"
+        url = f"http://{self.address}/v2/devices/{device_id}/commands/{command_id}/signal"  # noqa
         resp = requests.patch(url, headers=self.token_header, json=payload)
         resp.raise_for_status()
         return resp.json()
 
     def get_scene_list(self):
         self.logger.debug(f"get_scene_list: {self.address}")
-        url = f"http://{self.address}/v2/scenes"
+        url = f"http://{self.address}/v2/scenes"  # noqa
         resp = requests.get(url, headers=self.token_header)
         resp.raise_for_status()
         retList = []
         for key in resp.json():
             if not key.startswith("_"):     # skip internal keys
                 retList.append(key)
+        self.logger.debug(f"get_scene_list: {self.address}, {retList=}")
         return retList
 
     def get_scene(self, scene_id):
         self.logger.debug(f"get_scene: {scene_id} @ {self.address}")
-        url = f"http://{self.address}/v2/scenes/{scene_id}"
+        url = f"http://{self.address}/v2/scenes/{scene_id}"  # noqa
         resp = requests.get(url, headers=self.token_header)
         resp.raise_for_status()
+        self.logger.debug(f"get_scene: {self.address}, {resp.json()=}")
         return resp.json()
 
     def execute_scene(self, scene_id):
         self.logger.debug(f"execute_scene: {scene_id} @ {self.address}")
-        url = f"http://{self.address}/v2/scenes/{scene_id}/actions/Activate"
-        resp = requests.put(url, headers=self.token_header)
+        url = f"http://{self.address}/v2/scenes/{scene_id}/run"  # noqa
+        resp = requests.put(url, headers=self.token_header, json={})
         if not resp.ok:
             self.logger.warning(f"Execute Scene error {resp.status_code} for {url}")
 
     def enable_bpup(self, enable=True):
         self.logger.debug(f"enable_bpup: {enable} @ {self.address}")
-        url = f"http://{self.address}/v2/api/bpup"
+        url = f"http://{self.address}/v2/api/bpup"  # noqa
         payload = {"broadcast": enable}
         resp = requests.patch(url, headers=self.token_header, json=payload)
         resp.raise_for_status()

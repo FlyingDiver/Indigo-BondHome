@@ -12,12 +12,12 @@
             <Field id="bridge" type="menu">
                 <Label>Bridge:</Label>
                 <List class="self" method="get_bridge_list" filter="scenes" dynamicReload="true"/>
-                <CallbackMethod>menuChanged</CallbackMethod>
+                <CallbackMethod>menuChangedMenu</CallbackMethod>
             </Field>
             <Field id="scene" type="menu">
                 <Label>Scene:</Label>
                 <List class="self" method="get_scene_list" dynamicReload="true"/>
-                <CallbackMethod>menuChanged</CallbackMethod>
+                <CallbackMethod>menuChangedMenu</CallbackMethod>
             </Field>
         </ConfigUI>
     </MenuItem>
