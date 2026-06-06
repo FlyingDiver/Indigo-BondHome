@@ -137,13 +137,16 @@ class Plugin(indigo.PluginBase):
             self.known_devices[bondID] = {}
             for bond_dev in bridge.get_device_list():
                 self.known_devices[bondID][bond_dev] = bridge.get_device(bond_dev)
+            self.logger.debug(f"{device.name}: known_devices:\n{self.known_devices}")
 
             # get all the scenes the bridge knows about
-            self.known_scenes[bondID] = {}
-            for bond_scene in bridge.get_scene_list():
-                self.known_scenes[bondID][bond_scene] = bridge.get_scene(bond_scene)
-            self.logger.debug(f"{device.name}: known_devices:\n{self.known_devices}")
-            self.logger.debug(f"{device.name}: known_scenes:\n{self.known_scenes}")
+            try:
+                self.known_scenes[bondID] = {}
+                for bond_scene in bridge.get_scene_list():
+                    self.known_scenes[bondID][bond_scene] = bridge.get_scene(bond_scene)
+                self.logger.debug(f"{device.name}: known_scenes:\n{self.known_scenes[bondID]}")
+            except Exception as err:
+                del self.known_scenes[bondID]
 
             # start up the BPUP socket connection
             bridge.udp_start(self.receiveBPUP)
@@ -311,10 +314,11 @@ class Plugin(indigo.PluginBase):
             valuesDict['address'] = valuesDict['found_list']
         return valuesDict
 
-    @staticmethod
-    def get_bridge_list(_filter="", _valuesDict=None, _typeId="", _targetId=0):
+    def get_bridge_list(self, filter="", _valuesDict=None, _typeId="", _targetId=0):
         retList = []
         for dev in indigo.devices.iter("self.bondBridge"):
+            if filter == "scenes" and self.known_scenes.get(dev.address) is None:
+                continue
             retList.append((dev.states['bondid'], dev.name))
         retList.sort(key=lambda tup: tup[1])
         return retList

@@ -64,7 +64,7 @@
         <ConfigUI>
             <Field id="bridge" type="menu">
                 <Label>Bridge:</Label>
-                <List class="self" method="get_bridge_list" dynamicReload="true"/>
+                <List class="self" method="get_bridge_list" filter="scenes" dynamicReload="true"/>
                 <CallbackMethod>menuChanged</CallbackMethod>
             </Field>
             <Field id="scene" type="menu">
