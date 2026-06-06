@@ -1,0 +1,7 @@
+<?xml version="1.0"?>
+<Events>
+    <SupportURL>https://forums.indigodomo.com/viewforum.php?f=295</SupportURL>
+    <Event id="bpupStateUpdate">
+        <Name>Device State Updated (BPUP)</Name>
+    </Event>
+</Events>
