@@ -37,7 +37,6 @@ class Plugin(indigo.PluginBase):
         self.known_devices = {}         # nested dict of client devices, keyed by BondID then device_ID, value is dict returned by get_device()
         self.known_scenes = {}          # nested dict of scenes, keyed by BondID then scene_ID, value is dict returned by get_scene()
         self.deferred_start = []        # devices that need to be started after the bridges are all running
-        self.triggers = {}              # active triggers, keyed by trigger.id
 
     def startup(self):
         self.logger.info("Starting Bond Home")
@@ -294,21 +293,14 @@ class Plugin(indigo.PluginBase):
             state = data.get('b').get('open')
             device.updateStateOnServer(key='onOffState', value=bool(state))
 
-        for trigger in self.triggers.values():
-            if trigger.pluginTypeId == "bpupStateUpdate":
-                indigo.trigger.execute(trigger)
-
-    ########################################
-    # Trigger callbacks
-    ########################################
-
-    def triggerStartProcessing(self, trigger):
-        self.logger.debug(f"triggerStartProcessing: {trigger.name}")
-        self.triggers[trigger.id] = trigger
-
-    def triggerStopProcessing(self, trigger):
-        self.logger.debug(f"triggerStopProcessing: {trigger.name}")
-        del self.triggers[trigger.id]
+        for trigger in indigo.triggers.iter("self"):
+            if trigger.pluginTypeId == "bond-bpup-received":
+                trigger_dict = {"bond-bpup-received": True,
+                                "bond-bpup-bridge-id": data.get("B"),
+                                "bond-bpup-device-id": data.get("id"),
+                                "bond-bpup-data": json.dumps(data),
+                                }
+                indigo.trigger.execute(trigger, trigger_data=trigger_dict)
 
     ########################################
     #
@@ -408,7 +400,7 @@ class Plugin(indigo.PluginBase):
                 bridge = self.bond_bridges[device.pluginProps["bridge"]]
                 try:
                     parameter = indigo.activePlugin.substitute(device.pluginProps["on_parameter"])
-                except Exception as err:
+                except Exception as _err:
                     parameter = ""
                 if len(parameter):
                     payload = {"argument": int(parameter)}
@@ -427,7 +419,7 @@ class Plugin(indigo.PluginBase):
                 bridge = self.bond_bridges[device.pluginProps["bridge"]]
                 try:
                     parameter = indigo.activePlugin.substitute(device.pluginProps["off_parameter"])
-                except Exception as err:
+                except Exception as _err:
                     parameter = ""
                 if len(parameter):
                     payload = {"argument": int(parameter)}
@@ -445,7 +437,7 @@ class Plugin(indigo.PluginBase):
                 if device.onState:
                     try:
                         parameter = indigo.activePlugin.substitute(device.pluginProps["off_parameter"])
-                    except Exception as err:
+                    except Exception as _err:
                         parameter = ""
                     if len(parameter):
                         payload = {"argument": int(parameter)}
@@ -455,7 +447,7 @@ class Plugin(indigo.PluginBase):
                 else:
                     try:
                         parameter = indigo.activePlugin.substitute(device.pluginProps["on_parameter"])
-                    except Exception as err:
+                    except Exception as _err:
                         parameter = ""
                     if len(parameter):
                         payload = {"argument": int(parameter)}

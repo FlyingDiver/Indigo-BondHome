@@ -145,3 +145,4 @@ BondHome.indigoPlugin/.idea/
 
 .idea/
 /BondHome.indigoPlugin/Contents/Packages/
+/.claude/settings.local.json
